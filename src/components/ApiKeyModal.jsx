@@ -2,15 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { Key, ShieldCheck, ExternalLink, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { GEMINI_MODEL_OPTIONS, fetchAvailableGeminiModels, getGeminiModelCandidates } from '../services/aiVisionService';
 
-export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, selectedModel = 'auto', onSaveModel }) {
+export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, selectedModel = 'auto', onSaveModel, patternCount = 12, onSavePatternCount }) {
   const [inputKey, setInputKey] = useState(apiKey || '');
   const [model, setModel] = useState(selectedModel || 'auto');
+  const [localPatternCount, setLocalPatternCount] = useState(patternCount);
   const [testStatus, setTestStatus] = useState(null); // null | 'testing' | 'success' | 'error'
   const [testMessage, setTestMessage] = useState('');
 
   useEffect(() => {
     setModel(selectedModel || 'auto');
-  }, [selectedModel]);
+    setLocalPatternCount(patternCount || 12);
+  }, [selectedModel, patternCount]);
 
   if (!isOpen) return null;
 
@@ -37,9 +39,12 @@ export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, sel
       for (const targetModel of modelsToTest) {
         try {
           setTestMessage(`正在測試模型：${targetModel}...`);
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${inputKey.trim()}`, {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'x-goog-api-key': inputKey.trim()
+            },
             body: JSON.stringify({
               contents: [{ parts: [{ text: 'Hello, reply "OK"' }] }]
             })
@@ -74,6 +79,7 @@ export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, sel
   const handleSave = () => {
     onSaveApiKey(inputKey.trim());
     if (onSaveModel) onSaveModel(model);
+    if (onSavePatternCount) onSavePatternCount(localPatternCount);
     onClose();
   };
 
@@ -150,6 +156,30 @@ export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, sel
             {GEMINI_MODEL_OPTIONS.map(({ value, label }) => (
               <option key={value} value={value}>{label}</option>
             ))}
+          </select>
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '0.85rem', color: '#e2e8f0', marginBottom: '6px', fontWeight: '600' }}>
+            辨識型態數量 (Pattern Count)：
+          </label>
+          <select
+            value={localPatternCount}
+            onChange={(e) => setLocalPatternCount(Number(e.target.value))}
+            style={{
+              width: '100%',
+              background: '#1a2234',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '8px',
+              padding: '10px 14px',
+              color: '#ffffff',
+              fontSize: '0.9rem',
+              outline: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            <option value={12}>12 種 (預設新手，最常見反轉型態)</option>
+            <option value={52}>52 種 (進階玩家，完整經典圖鑑)</option>
           </select>
         </div>
 

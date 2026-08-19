@@ -1,6 +1,6 @@
 # 📈 K-Line Master - 股票 K 線智能分析與走勢預判系統
 
-> 基於 **React + Vite + Google Gemini Flash 多模態大模型 + 本地 WASM OCR** 的現代化股票 K 線圖表智能辨識、型態分析與隔日走勢預測工具。
+> 基於 **React + Vite + Google Gemini Flash 多模態大模型** 的現代化股票 K 線圖表智能辨識、型態分析與隔日走勢預測工具。
 
 🔗 **線上體驗直接點擊 (Live Demo)**：[https://marcochiu.github.io/kline/](https://marcochiu.github.io/kline/)
 
@@ -25,7 +25,6 @@
 
 5. **🛡️ 零成本 & 隱私安全**
    - 支援 Google AI Studio 免費層 API Key，金鑰僅儲存於本地瀏覽器 `localStorage`，絕不上傳第三方伺服器。
-   - 內建離線 Tesseract WASM 本地 OCR 備用引擎。
 
 ---
 
@@ -40,7 +39,7 @@ npm install
 ```bash
 npm run dev
 ```
-瀏覽器開啟 `http://localhost:3000` 即可開始使用。
+瀏覽器開啟 `http://localhost:3004` 即可開始使用。
 
 ### 3. 一鍵建置與 GitHub Pages 部署
 ```bash
@@ -72,7 +71,7 @@ kline/
 │   ├── data/
 │   │   └── klinePatterns.js         # 52 種 K 棒型態戰法完整資料庫
 │   ├── services/
-│   │   └── aiVisionService.js       # Gemini Flash 雲端 API & 本地 OCR 解析引擎
+│   │   └── aiVisionService.js       # Gemini Flash 雲端 API 解析引擎
 │   ├── styles/
 │   │   └── index.css                # 玻璃擬態樣式與行動端響應式 CSS
 │   ├── App.jsx                      # 主應用程式入口

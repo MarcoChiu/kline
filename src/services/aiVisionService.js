@@ -1,12 +1,12 @@
 import { KLINE_PATTERNS } from '../data/klinePatterns';
 
 export const GEMINI_MODEL_OPTIONS = [
-  { value: 'gemini-2.0-pro-exp-02-05', label: '👑 Gemini 2.0 Pro Experimental (最高智商頂規版・預設首選)' },
+  { value: 'gemini-2.5-flash', label: '🥇 Gemini 2.5 Flash (最新旗艦・預設首選)' },
+  { value: 'gemini-2.5-flash-lite', label: '⚡ Gemini 2.5 Flash-Lite (極速輕量)' },
+  { value: 'gemini-2.0-pro-exp-02-05', label: '👑 Gemini 2.0 Pro Experimental (最高智商頂規版)' },
   { value: 'gemini-2.0-flash-thinking-exp-01-21', label: '🧠 Gemini 2.0 Flash Thinking (深度推理思考版)' },
-  { value: 'gemini-2.0-flash', label: '🥇 Gemini 2.0 Flash (最新旗艦・秒速辨識)' },
-  { value: 'gemini-2.0-flash-lite', label: '⚡ Gemini 2.0 Flash-Lite (極速輕量)' },
-  { value: 'gemini-1.5-pro', label: '📊 Gemini 1.5 Pro (長文本專業版)' },
-  { value: 'gemini-1.5-flash', label: '💎 Gemini 1.5 Flash (經典穩定版)' }
+  { value: 'gemini-2.0-flash', label: '💎 Gemini 2.0 Flash (經典穩定版)' },
+  { value: 'gemini-1.5-pro', label: '📊 Gemini 1.5 Pro (長文本專業版)' }
 ];
 
 const DEFAULT_GEMINI_MODELS = GEMINI_MODEL_OPTIONS.map(({ value }) => value);
@@ -31,13 +31,13 @@ export const SAMPLE_CHARTS = [
 /**
  * 智能圖片辨識入口 (需要 Gemini API Key)
  */
-export async function analyzeKlineImage(base64Image, apiKey = null, selectedModel = 'auto') {
+export async function analyzeKlineImage(base64Image, apiKey = null, selectedModel = 'auto', patternCount = 12) {
   if (!apiKey || apiKey.trim().length < 10) {
     throw new Error('請先設定 Gemini API Key 才能進行圖表辨識分析');
   }
 
-  console.log('正在呼叫 Google Gemini Vision API, 指定模型:', selectedModel);
-  const geminiResult = await callGeminiVision(base64Image, apiKey.trim(), selectedModel);
+  console.log('正在呼叫 Google Gemini Vision API, 指定模型:', selectedModel, '型態數量:', patternCount);
+  const geminiResult = await callGeminiVision(base64Image, apiKey.trim(), selectedModel, patternCount);
   if (geminiResult) return geminiResult;
 
   throw new Error('Gemini API 未回傳有效結果，請稍後再試');
@@ -46,7 +46,7 @@ export async function analyzeKlineImage(base64Image, apiKey = null, selectedMode
 /**
  * 呼叫 Google Gemini Vision API
  */
-async function callGeminiVision(base64Data, apiKey, selectedModel = 'auto') {
+async function callGeminiVision(base64Data, apiKey, selectedModel = 'auto', patternCount = 12) {
   let mimeType = 'image/png';
   let cleanBase64 = base64Data;
 
@@ -58,7 +58,11 @@ async function callGeminiVision(base64Data, apiKey, selectedModel = 'auto') {
     cleanBase64 = base64Data.replace(/\s/g, '');
   }
 
-  const patternNamesList = KLINE_PATTERNS.map(p => `- ${p.chineseName} (ID: ${p.id})`).join('\n');
+  let patternsToUse = KLINE_PATTERNS;
+  if (patternCount === 12) {
+    patternsToUse = KLINE_PATTERNS.filter(p => p.isTopFrequent);
+  }
+  const patternNamesList = patternsToUse.map(p => `- ${p.chineseName} (ID: ${p.id})`).join('\n');
 
   const prompt = `你是一位「嚴謹客觀的量化技術與籌碼分析師 (Strict Quantitative Technical & Chip Analyst)」。
 你的唯一職責是透過視覺辨識使用者上傳的圖表，進行純粹基於數據、線型、價量與資金動向的客觀分析。
@@ -81,7 +85,7 @@ async function callGeminiVision(base64Data, apiKey, selectedModel = 'auto') {
 - 切勿把 Y 軸或歷史刻度的最高標記誤當成今日收盤價！
 
 【系統內建 K 線形態庫】
-請盡量從以下 52 種系統支援的型態中，挑選最符合目前走勢的型態（請精準對應 ID 與名稱）：
+請盡量從以下 ${patternCount} 種系統支援的型態中，挑選最符合目前走勢的型態（請精準對應 ID 與名稱）：
 ${patternNamesList}
 
 【特別警告與視覺重點】
@@ -94,6 +98,7 @@ Step 2: 均線與趨勢判定 (判斷目前價格位於 MA20/MA60 之上或下�
 Step 3: 結構、趨勢與籌碼共振評估 (標示壓力/支撐、共振與背離分析、土洋動向)
 Step 4: 明日走勢推演 (情境A偏多、情境B偏空、情境C盤整，各自的機率與條件)
 Step 5: 嚴格的操作結論與風險提示 (強制標註以均線或前低作為防守點，提醒法人倒貨警訊)
+Step 6: 給新手的直白建議 (請根據多空勝率與型態真實評估。請務必同時顧及「空手者」與「持有者」，明確告訴新手現在是該買進、續抱、還是該賣出快逃！若有多頭訊號請勇敢看多，切勿一律給出觀望)
 
 【輸出格式要求】
 請務必精準提取股名與代碼，並「嚴格以合法 JSON 格式」輸出，不可有 JSON 以外的文字。
@@ -134,6 +139,8 @@ JSON 格式定義：
       "防守點提示: 必須明確給出技術面(如 MA 均線或前低)的停損價位",
       "籌碼警訊: 提醒若出現特定籌碼動向應視為警訊"
     ],
+    "actionDecision": "Step 6-1: 懶人包結論。強制從這三個詞中選一個輸出：【買進】、【觀望】、【賣出】。絕對不可輸出其他文字。",
+    "beginnerAdvice": "Step 6-2: 針對完全不懂股票的新手，請大膽且明確地給出操作結論。必須包含兩個面向：1.【空手者】要不要買？ 2.【持有者】要不要賣(停損/停利快逃，或是安心續抱)？請用最直白的一句話解釋原因。",
     "riskLevel": "極高 / 高 / 中 / 低風險"
   }
 }`;
@@ -222,8 +229,8 @@ export async function fetchAvailableGeminiModels(apiKey) {
   }
 
   const response = await fetchWithTimeout(
-    `https://generativelanguage.googleapis.com/v1beta/models?key=${normalizedKey}`,
-    {},
+    `https://generativelanguage.googleapis.com/v1beta/models`,
+    { headers: { 'x-goog-api-key': normalizedKey } },
     15000
   );
   if (!response.ok) {
@@ -293,14 +300,17 @@ async function requestGeminiModel(model, apiKey, prompt, mimeType, cleanBase64) 
     }],
     generationConfig
   });
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const retryableStatuses = new Set([408, 429, 500, 502, 503, 504]);
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
       const response = await fetchWithTimeout(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey
+        },
         body
       }, 45000);
 

@@ -189,14 +189,6 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
                 (item.description && (item.description.includes(p.name.split(' ')[0]) || item.description.includes(p.chineseName.split(' ')[0])))
               );
 
-              // 智慧兜底：如果沒抓到精準 id，依多空判斷最貼近的百科形態
-              if (!matchedEncyclopedia) {
-                if (!isUp || item.description?.includes('跌破') || item.description?.includes('轉弱') || item.description?.includes('回測')) {
-                  matchedEncyclopedia = KLINE_PATTERNS.find(p => p.id === 'dark_cloud_cover') || KLINE_PATTERNS.find(p => p.id === 'big_bear');
-                } else {
-                  matchedEncyclopedia = KLINE_PATTERNS.find(p => p.id === 'big_bull') || KLINE_PATTERNS.find(p => p.id === 'three_white_soldiers');
-                }
-              }
 
               return (
                 <div key={idx} className="glass-card" style={{ padding: '14px', borderLeft: '4px solid #8b5cf6' }}>
@@ -334,6 +326,32 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
               </div>
             )}
           </div>
+
+          {prediction.beginnerAdvice && (
+            <div style={{ marginBottom: '16px', padding: '16px', borderRadius: '10px', background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(239, 68, 68, 0.15) 100%)', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <div style={{ fontSize: '0.95rem', color: '#fbbf24', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Target size={18} /> 新手小白買賣建議
+                </div>
+                {prediction.actionDecision && (
+                  <div style={{
+                    padding: '4px 12px',
+                    borderRadius: '6px',
+                    fontWeight: '900',
+                    fontSize: '1.05rem',
+                    color: '#fff',
+                    background: prediction.actionDecision.includes('買') ? '#10b981' : prediction.actionDecision.includes('賣') ? '#ef4444' : '#f59e0b',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                  }}>
+                    {prediction.actionDecision}
+                  </div>
+                )}
+              </div>
+              <div style={{ fontSize: '1.05rem', fontWeight: '700', color: '#ffffff', lineHeight: '1.5' }}>
+                {prediction.beginnerAdvice}
+              </div>
+            </div>
+          )}
 
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: '1.5' }}>
             {prediction.sentimentSummary}

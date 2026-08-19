@@ -5,6 +5,7 @@ import { SAMPLE_CHARTS } from '../services/aiVisionService';
 export default function ImageUploader({ onImageSelected, isAnalyzing, selectedImage }) {
   const [isDragging, setIsDragging] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [stockCode, setStockCode] = useState('');
   const fileInputRef = useRef(null);
 
   // 監聽全域 Ctrl + V 剪貼簿貼上圖片
@@ -107,6 +108,42 @@ export default function ImageUploader({ onImageSelected, isAnalyzing, selectedIm
         </div>
       </div>
 
+      {/* 快速開啟 Yahoo 股市截圖 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', background: 'rgba(0,0,0,0.2)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--border-subtle)', flexWrap: 'wrap' }}>
+        <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: '600' }}>
+          快速開啟截圖網頁：
+        </div>
+        <input
+          type="text"
+          placeholder="輸入台股代號 (如 2330)"
+          value={stockCode}
+          onChange={(e) => setStockCode(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && stockCode.trim()) {
+              window.open(`https://tw.stock.yahoo.com/quote/${stockCode.trim()}.TW/technical-analysis`, '_blank', 'noopener,noreferrer');
+            }
+          }}
+          style={{
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            borderRadius: '6px',
+            padding: '6px 10px',
+            color: '#fff',
+            fontSize: '0.85rem',
+            width: '160px',
+            outline: 'none'
+          }}
+        />
+        <button
+          disabled={!stockCode.trim()}
+          onClick={() => window.open(`https://tw.stock.yahoo.com/quote/${stockCode.trim()}.TW/technical-analysis`, '_blank', 'noopener,noreferrer')}
+          className="btn-primary"
+          style={{ padding: '6px 12px', fontSize: '0.85rem', opacity: stockCode.trim() ? 1 : 0.5, cursor: stockCode.trim() ? 'pointer' : 'not-allowed' }}
+        >
+          前往 Yahoo 技術分析
+        </button>
+      </div>
+
       {/* 拖曳上傳與貼上區域 */}
       <div
         className={`drop-zone ${isDragging ? 'dragging' : ''}`}
@@ -207,7 +244,9 @@ export default function ImageUploader({ onImageSelected, isAnalyzing, selectedIm
                   <Check size={16} /> 1. 【頂部行情狀態列】（最關鍵！）
                 </div>
                 <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>
-                  務必包含：<strong>股票名稱、代碼、開/高/低/收價格、當日漲跌幅、MA5/10/20/60 均線數字</strong>。AI 主要從這裡提取精準行情數據。
+                  務必包含：<strong>股票名稱、代碼 (如 2609)、開/高/低/收價格、當日漲跌幅、MA5/10/20/60 均線數字</strong>。AI 主要從這裡提取精準行情數據。
+                  <br />
+                  <span style={{ color: '#fca5a5', display: 'inline-block', marginTop: '4px' }}>💡 強烈推薦使用 <strong>Yahoo 股市 (技術分析頁面)</strong> 截圖，請確保股名旁邊的<strong>「股號數字」</strong>有拍進去，辨識率最高！</span>
                 </p>
               </div>
 

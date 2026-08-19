@@ -14,7 +14,8 @@ export default function App() {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [apiKey, setApiKey] = useState('');
-  const [selectedModel, setSelectedModel] = useState('gemini-2.0-pro-exp-02-05');
+  const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
+  const [patternCount, setPatternCount] = useState(12);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
   const [loadedSimulatorPattern, setLoadedSimulatorPattern] = useState(null);
@@ -26,6 +27,9 @@ export default function App() {
 
     const savedModel = localStorage.getItem('kline_gemini_model');
     if (savedModel) setSelectedModel(savedModel);
+
+    const savedPatternCount = localStorage.getItem('kline_pattern_count');
+    if (savedPatternCount) setPatternCount(Number(savedPatternCount));
   }, []);
 
   const handleSaveApiKey = (key) => {
@@ -40,6 +44,11 @@ export default function App() {
   const handleSaveModel = (model) => {
     setSelectedModel(model);
     localStorage.setItem('kline_gemini_model', model);
+  };
+
+  const handleSavePatternCount = (count) => {
+    setPatternCount(count);
+    localStorage.setItem('kline_pattern_count', count.toString());
   };
 
   // 從百科直接帶入特定型態至模擬測試畫板
@@ -75,7 +84,7 @@ export default function App() {
         });
       }
 
-      const result = await analyzeKlineImage(base64Data, apiKey, selectedModel);
+      const result = await analyzeKlineImage(base64Data, apiKey, selectedModel, patternCount);
       setAnalysisResult(result);
 
       confetti({
@@ -158,6 +167,8 @@ export default function App() {
         onSaveApiKey={handleSaveApiKey}
         selectedModel={selectedModel}
         onSaveModel={handleSaveModel}
+        patternCount={patternCount}
+        onSavePatternCount={handleSavePatternCount}
       />
 
     </div>
