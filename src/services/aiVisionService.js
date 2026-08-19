@@ -2,14 +2,13 @@ import { createWorker } from 'tesseract.js';
 import { KLINE_PATTERNS } from '../data/klinePatterns';
 
 export const GEMINI_MODEL_OPTIONS = [
-  { value: 'auto', label: '智慧自動選擇 (推薦)' },
-  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (品質與速度平衡)' },
-  { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite (最快、最省配額)' },
-  { value: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite (新一代高性價比)' },
-  { value: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash-Lite (新一代輕量模型)' },
-  { value: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash (較高品質)' },
-  { value: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash (較高品質)' },
-  { value: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash (目前旗艦)' }
+  { value: 'auto', label: '✨ 智慧自動選擇 (推薦 - 優先 2.0 Flash / Thinking)' },
+  { value: 'gemini-2.0-flash', label: '🥇 Gemini 2.0 Flash (最新旗艦・秒速辨識)' },
+  { value: 'gemini-2.0-flash-lite', label: '⚡ Gemini 2.0 Flash-Lite (極速輕量)' },
+  { value: 'gemini-2.0-flash-thinking-exp-01-21', label: '🧠 Gemini 2.0 Flash Thinking (深度推理思考版)' },
+  { value: 'gemini-2.0-pro-exp-02-05', label: '👑 Gemini 2.0 Pro Experimental (最高智商頂規版)' },
+  { value: 'gemini-1.5-flash', label: '💎 Gemini 1.5 Flash (經典穩定版)' },
+  { value: 'gemini-1.5-pro', label: '📊 Gemini 1.5 Pro (長文本專業版)' }
 ];
 
 const DEFAULT_GEMINI_MODELS = GEMINI_MODEL_OPTIONS
@@ -271,10 +270,16 @@ function normalizeModelName(modelName = '') {
 function isFreeVisionModel(modelName) {
   if (!modelName || !modelName.startsWith('gemini-')) return false;
   if (/(?:-image|-tts|-live|embedding|robotics|computer-use|deep-research)/i.test(modelName)) return false;
-  return /flash/i.test(modelName);
+  return /flash|pro|thinking/i.test(modelName);
 }
 
 async function requestGeminiModel(model, apiKey, prompt, mimeType, cleanBase64) {
+  const isThinkingModel = model.includes('thinking');
+  const generationConfig = {
+    temperature: 0.2,
+    ...(isThinkingModel ? {} : { responseMimeType: 'application/json' })
+  };
+
   const body = JSON.stringify({
     contents: [{
       parts: [
@@ -287,10 +292,7 @@ async function requestGeminiModel(model, apiKey, prompt, mimeType, cleanBase64) 
         }
       ]
     }],
-    generationConfig: {
-      temperature: 0.2,
-      responseMimeType: 'application/json'
-    }
+    generationConfig
   });
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const retryableStatuses = new Set([408, 429, 500, 502, 503, 504]);
