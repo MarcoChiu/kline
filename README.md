@@ -2,6 +2,8 @@
 
 > 基於 **React + Vite + Google Gemini 2.0 Vision 多模態大模型 + 本地 WASM OCR** 的現代化股票 K 線圖表智能辨識、型態分析與隔日走勢預測工具。
 
+🔗 **線上體驗直接點擊 (Live Demo)**：[https://marcochiu.github.io/kline/](https://marcochiu.github.io/kline/)
+
 ---
 
 ## 🌟 核心特色
