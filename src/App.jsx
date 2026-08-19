@@ -14,7 +14,7 @@ export default function App() {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [apiKey, setApiKey] = useState('');
-  const [selectedModel, setSelectedModel] = useState('auto');
+  const [selectedModel, setSelectedModel] = useState('gemini-2.0-pro-exp-02-05');
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
   const [loadedSimulatorPattern, setLoadedSimulatorPattern] = useState(null);

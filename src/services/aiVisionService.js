@@ -1,18 +1,15 @@
 import { KLINE_PATTERNS } from '../data/klinePatterns';
 
 export const GEMINI_MODEL_OPTIONS = [
-  { value: 'auto', label: '✨ 智慧自動選擇 (推薦 - 優先 2.0 Flash / Thinking)' },
+  { value: 'gemini-2.0-pro-exp-02-05', label: '👑 Gemini 2.0 Pro Experimental (最高智商頂規版・預設首選)' },
+  { value: 'gemini-2.0-flash-thinking-exp-01-21', label: '🧠 Gemini 2.0 Flash Thinking (深度推理思考版)' },
   { value: 'gemini-2.0-flash', label: '🥇 Gemini 2.0 Flash (最新旗艦・秒速辨識)' },
   { value: 'gemini-2.0-flash-lite', label: '⚡ Gemini 2.0 Flash-Lite (極速輕量)' },
-  { value: 'gemini-2.0-flash-thinking-exp-01-21', label: '🧠 Gemini 2.0 Flash Thinking (深度推理思考版)' },
-  { value: 'gemini-2.0-pro-exp-02-05', label: '👑 Gemini 2.0 Pro Experimental (最高智商頂規版)' },
-  { value: 'gemini-1.5-flash', label: '💎 Gemini 1.5 Flash (經典穩定版)' },
-  { value: 'gemini-1.5-pro', label: '📊 Gemini 1.5 Pro (長文本專業版)' }
+  { value: 'gemini-1.5-pro', label: '📊 Gemini 1.5 Pro (長文本專業版)' },
+  { value: 'gemini-1.5-flash', label: '💎 Gemini 1.5 Flash (經典穩定版)' }
 ];
 
-const DEFAULT_GEMINI_MODELS = GEMINI_MODEL_OPTIONS
-  .filter(({ value }) => value !== 'auto')
-  .map(({ value }) => value);
+const DEFAULT_GEMINI_MODELS = GEMINI_MODEL_OPTIONS.map(({ value }) => value);
 const GEMINI_MODEL_CACHE_TTL = 5 * 60 * 1000;
 let geminiModelCache = null;
 
