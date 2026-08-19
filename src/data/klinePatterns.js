@@ -1,5 +1,5 @@
 /**
- * 完整 48 種經典 K 棒型態戰法圖鑑資料庫 (源自《錢線百分百》48種K棒型態戰法大全)
+ * 完整 52 種經典 K 棒型態戰法圖鑑資料庫 (含《錢線百分百》48種K棒型態戰法中的內困三日翻紅／翻黑)
  * 全面轉化為極度白話、新手友善、具備實戰操盤建議的口語文案。
  */
 
@@ -398,6 +398,60 @@ export const KLINE_PATTERNS = [
     svgConfig: {
       type: 'dual',
       bars: [ { open: 75, close: 20, high: 15, low: 80, color: '#ef4444' }, { open: 48, close: 48, high: 38, low: 58, color: '#f59e0b' } ]
+    }
+  },
+  {
+    id: 'internal_three_up',
+    name: '內困三日翻紅 (Three Inside Up)',
+    category: 'multi',
+    sentiment: 'bullish',
+    signalStrength: 'high',
+    winRate: 80,
+    locationType: '波段低檔 / 內困反轉段',
+    entryRule: '第三根紅 K 向上突破第一根 K 棒開盤價時進場',
+    stopLossRule: '跌破第二根小 K 的最低點或第一根低點停損',
+    targetRule: '向上挑戰前波起跌點與上方壓力區',
+    chineseName: '內困三日翻紅 / 三日內困反轉',
+    summary: '第一天收出長黑，第二天的小紅 K 完全藏在第一天實體內，第三天再收紅並突破第一天開盤價。',
+    marketPsychology: '下跌動能先在第二天收斂，第三天買盤完成確認突破，代表空方失守、多頭開始接管行情。',
+    tradingRules: [
+      '第三天紅 K 確認突破第一天開盤價後再進場，避免只看到母子線就過早猜底。',
+      '停損設在第二根小 K 或第一根長黑的低點下方。'
+    ],
+    svgConfig: {
+      type: 'tri',
+      bars: [
+        { open: 25, close: 70, high: 18, low: 78, color: '#10b981' },
+        { open: 58, close: 42, high: 36, low: 64, color: '#ef4444' },
+        { open: 45, close: 15, high: 10, low: 50, color: '#ef4444' }
+      ]
+    }
+  },
+  {
+    id: 'internal_three_down',
+    name: '內困三日翻黑 (Three Inside Down)',
+    category: 'multi',
+    sentiment: 'bearish',
+    signalStrength: 'high',
+    winRate: 81,
+    locationType: '波段高檔 / 內困反轉段',
+    entryRule: '第三根綠 K 向下跌破第一根 K 棒開盤價時停利或建立避險',
+    stopLossRule: '站回第二根小 K 的最高點或第一根高點停損',
+    targetRule: '向下回測前波起漲點與下方支撐區',
+    chineseName: '內困三日翻黑 / 三日內困反轉',
+    summary: '第一天收出長紅，第二天的小綠 K 完全藏在第一天實體內，第三天再收黑並跌破第一天開盤價。',
+    marketPsychology: '上漲動能先在第二天停滯，第三天賣盤完成確認跌破，代表多方失守、空方開始接管行情。',
+    tradingRules: [
+      '第三天綠 K 確認跌破第一天開盤價後再減碼或避險，不要只因母子線就提前追空。',
+      '防守點設在第二根小 K 或第一根長紅的高點上方。'
+    ],
+    svgConfig: {
+      type: 'tri',
+      bars: [
+        { open: 75, close: 20, high: 15, low: 80, color: '#ef4444' },
+        { open: 40, close: 58, high: 34, low: 64, color: '#10b981' },
+        { open: 45, close: 85, high: 40, low: 90, color: '#10b981' }
+      ]
     }
   },
   {

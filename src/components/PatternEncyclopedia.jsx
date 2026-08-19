@@ -177,7 +177,7 @@ export default function PatternEncyclopedia({ selectedPatternId, onSelectPattern
           </div>
         </div>
 
-        {/* 核心實戰範圍切換 (Top 12 vs 48 全集) */}
+        {/* 核心實戰範圍切換 (Top 12 vs 52 全集) */}
         <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
           <button
             onClick={() => setScopeFilter('top12')}
@@ -194,7 +194,7 @@ export default function PatternEncyclopedia({ selectedPatternId, onSelectPattern
             style={{ fontSize: '0.88rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <BookOpen size={16} />
-            <span>📚 全部 48 種 K 棒形態大全</span>
+            <span>📚 全部 52 種 K 棒形態大全</span>
           </button>
         </div>
 
@@ -260,7 +260,7 @@ export default function PatternEncyclopedia({ selectedPatternId, onSelectPattern
             查無符合條件的 K 線形態
           </h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '16px' }}>
-            請嘗試切換「48 種形態大全」或重設篩選條件。
+            請嘗試切換「52 種形態大全」或重設篩選條件。
           </p>
           <button
             onClick={() => {
