@@ -49,23 +49,27 @@ export default function App() {
     localStorage.setItem('kline_gemini_model', model);
   };
 
-  // 選擇圖片並開始分析
-  const handleImageSelected = async (imageSource, title, presetData = null) => {
+  // 選擇圖片並開始分析 (即時調用 AI 進行真實辨識)
+  const handleImageSelected = async (imageSource, title) => {
     setSelectedImage(imageSource || null);
     setIsAnalyzing(true);
     setAnalysisResult(null); // 清除舊資料，讓 UI 確實反映出正在更新
     setActiveTab('analyzer');
 
     try {
-      if (presetData) {
-        // 預設範例
-        await new Promise(r => setTimeout(r, 600));
-        setAnalysisResult(presetData);
-      } else {
-        // 使用者貼上或上傳圖片
-        const result = await analyzeKlineImage(imageSource, apiKey, selectedModel);
-        setAnalysisResult(result);
+      let base64Data = imageSource;
+      if (imageSource && !imageSource.startsWith('data:')) {
+        const res = await fetch(imageSource);
+        const blob = await res.blob();
+        base64Data = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
       }
+
+      const result = await analyzeKlineImage(base64Data, apiKey, selectedModel);
+      setAnalysisResult(result);
 
       // 特效回饋
       confetti({
@@ -75,7 +79,8 @@ export default function App() {
         colors: ['#3b82f6', '#10b981', '#ef4444']
       });
     } catch (err) {
-      console.error('Analysis failed:', err);
+      console.error('辨識失敗:', err);
+      alert('辨識失敗: ' + (err.message || '未知錯誤'));
     } finally {
       setIsAnalyzing(false);
     }

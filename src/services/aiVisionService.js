@@ -20,56 +20,13 @@ let geminiModelCache = null;
 import sampleYangMing from '../assets/sample_yangming.png';
 
 /**
- * 預設展示範例圖片列表
+ * 預設標準截圖範例列表
  */
 export const SAMPLE_CHARTS = [
   {
     id: sampleYangMing,
-    title: '陽明 (2609) - 爆量長紅攻堅',
-    subTitle: '突破整理平台，帶量突破 (收 59.0 元, 漲跌 +2.8)',
-    presetAnalysis: {
-      stockName: '陽明',
-      stockCode: '2609',
-      currentPrice: 59.0,
-      priceChange: 2.8,
-      changePercent: 4.98,
-      latestDate: '2026/08/19',
-      movingAverages: {
-        ma5: 54.58,
-        ma10: 52.91,
-        ma20: 51.81,
-        ma60: 51.66
-      },
-      volume: '113,981 張',
-      detectedPatterns: [
-        {
-          patternId: 'big_bull',
-          name: '大陽線 (爆量長紅突破)',
-          confidence: 96,
-          description: '今日強攻收在最高價 59.0 元 (+2.8 元，+4.98%)，帶量 113,981 張一口氣攻破所有均線反壓，買家完全掌控戰局！'
-        },
-        {
-          patternId: 'three_white_soldiers',
-          name: '多頭均線發散向上 (黃金排列)',
-          confidence: 92,
-          description: 'MA5(54.58) > MA10(52.91) > MA20(51.81) > MA60(51.66) 短中長期均線全面翻揚，多方攻擊動能強勁。'
-        }
-      ],
-      prediction: {
-        bullishProbability: 82,
-        neutralProbability: 12,
-        bearishProbability: 6,
-        sentimentSummary: '爆量長紅強勢突破整理平台，均線多頭黃金排列，主力大單持續敲進',
-        nextDayForecast: '情境 A (偏多續攻)：延續今日攻勢開高挑戰 60.0 ~ 62.5 元整數關卡，成交量若能維持 8 萬張以上有望續創新高。\n情境 B (強勢回測)：若盤中有拉回測試 56.5 ~ 57.5 元支撐不破，為健康回測洗盤點。\n情境 C (極端轉弱)：若意外重挫跌破 5日線 (54.58 元) 則短線攻勢暫歇。',
-        supportLevels: [55.6, 54.58, 51.81],
-        resistanceLevels: [60.0, 63.0, 66.0],
-        tradingStrategy: [
-          '🚀 【順勢續抱】：持股續抱，沿 5 日均線 (54.58 元) 順勢操作，未跌破 5 日線不停利。',
-          '🎯 【加碼點位】：若盤中有拉回 56.5 ~ 57.5 元測試支撐有守，為絕佳加碼點。'
-        ],
-        riskLevel: '低度風險 (強勢順勢多頭波)'
-      }
-    }
+    title: '陽明 (2609) 標準看盤截圖',
+    description: '包含頂部行情數值列、中間 K 線走勢與下方成交量之標準範例'
   }
 ];
 
