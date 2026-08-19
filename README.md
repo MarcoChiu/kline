@@ -68,7 +68,7 @@ kline/
 │   │   ├── Header.jsx               # 頂部導航與 Build Time 標籤
 │   │   ├── ImageUploader.jsx        # 圖片拖曳、貼上、上傳與範例載入
 │   │   ├── InteractiveCanvas.jsx    # 互動式 K 線模擬器 (畫板)
-│   │   └── PatternEncyclopedia.jsx  # 48 種 K 線型態百科與 SVG 向量渲染
+│   │   └── PatternEncyclopedia.jsx  # 52 種 K 線型態百科與 SVG 向量渲染
 │   ├── data/
 │   │   └── klinePatterns.js         # 52 種 K 棒型態戰法完整資料庫
 │   ├── services/
