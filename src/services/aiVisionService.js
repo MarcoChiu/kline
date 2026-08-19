@@ -479,8 +479,9 @@ async function extractTextFromImageHeader(dataUrl) {
   const ocrPromise = (async () => {
     try {
       const croppedDataUrl = await cropAndEnhanceImageHeader(dataUrl);
-      // 只用 eng：數字 + MA 標籤足夠，中文字靠後續正則更可靠
-      const worker = await createWorker('eng');
+      // 使用 chi_tra+eng 以辨識中文標籤(開/高/低/收/漲跌/量)與數字
+      // Tesseract.js v7 預設從 jsDelivr CDN 下載 @tesseract.js-data/chi_tra 語言包
+      const worker = await createWorker('chi_tra+eng');
       const ret = await worker.recognize(croppedDataUrl);
       await worker.terminate();
       const text = ret.data.text || '';
