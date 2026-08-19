@@ -58,6 +58,8 @@ async function callGeminiVision(base64Data, apiKey, selectedModel = 'auto') {
     cleanBase64 = base64Data.replace(/\s/g, '');
   }
 
+  const patternNamesList = KLINE_PATTERNS.map(p => `- ${p.chineseName} (ID: ${p.id})`).join('\n');
+
   const prompt = `你是一位「嚴謹客觀的量化技術與籌碼分析師 (Strict Quantitative Technical & Chip Analyst)」。
 你的唯一職責是透過視覺辨識使用者上傳的圖表，進行純粹基於數據、線型、價量與資金動向的客觀分析。
 
@@ -77,6 +79,10 @@ async function callGeminiVision(base64Data, apiKey, selectedModel = 'auto') {
 - 【漲跌幅 changePercent】: 當日漲跌幅百分比（例如 4.98），若圖中無 %，請由 priceChange / (closePrice - priceChange) * 100 自動算出。
 - 【MA 均線】: 請精準提取 MA5, MA10, MA20, MA60 各均線數值。
 - 切勿把 Y 軸或歷史刻度的最高標記誤當成今日收盤價！
+
+【系統內建 K 線形態庫】
+請盡量從以下 48 種系統支援的型態中，挑選最符合目前走勢的型態（請精準對應 ID 與名稱）：
+${patternNamesList}
 
 請嚴格執行以下工作流程：
 Step 1: 視覺特徵提取 (價格、量能、法人籌碼動向、技術指標現況)
@@ -104,10 +110,10 @@ JSON 格式定義：
   "volume": "成交量描述(例如: 113,981 張)",
   "detectedPatterns": [
     {
-      "patternId": "形態代碼",
-      "name": "Step 1 & 2: 視覺特徵與共振評估",
+      "patternId": "從上述形態庫挑選對應的 ID (如 'big_bull')",
+      "name": "從上述形態庫挑選對應的中文名稱",
       "confidence": 90,
-      "description": "詳細描述型態、籌碼背離或共振狀態"
+      "description": "詳細描述為何判定為此型態，以及籌碼背離或共振狀態"
     }
   ],
   "prediction": {
