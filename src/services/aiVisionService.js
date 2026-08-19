@@ -543,29 +543,18 @@ function parseStockTextFromOCR(text) {
 
   if (!text) return result;
 
-  // 1. 股票代碼與名稱提取
-  const codeMatch = text.match(/[(（]?\s*([1-9]\d{3})\s*[)）]?/);
-  if (codeMatch) result.stockCode = codeMatch[1];
-
-  // 搜尋已知或常見名稱
-  const nameMatch = text.match(/([\u4e00-\u9fa5]{2,6})\s*[(（]?\s*([1-9]\d{3})/);
-  if (nameMatch) {
-    result.stockName = nameMatch[1];
-    result.stockCode = nameMatch[2];
+  // 1. 股票代碼與名稱提取 (通用解析)
+  const nameCodeMatch = text.match(/([\u4e00-\u9fa5]{2,6})\s*[(（]?\s*([1-9]\d{3})/);
+  const codeNameMatch = text.match(/([1-9]\d{3})\s*([\u4e00-\u9fa5]{2,6})/);
+  if (nameCodeMatch) {
+    result.stockName = nameCodeMatch[1];
+    result.stockCode = nameCodeMatch[2];
+  } else if (codeNameMatch) {
+    result.stockCode = codeNameMatch[1];
+    result.stockName = codeNameMatch[2];
   } else {
-    if (text.includes('陽明') || result.stockCode === '2609') {
-      result.stockName = '陽明';
-      result.stockCode = '2609';
-    } else if (text.includes('力積電') || result.stockCode === '6770') {
-      result.stockName = '力積電';
-      result.stockCode = '6770';
-    } else if (text.includes('台積電') || result.stockCode === '2330') {
-      result.stockName = '台積電';
-      result.stockCode = '2330';
-    } else if (text.includes('長榮') || result.stockCode === '2603') {
-      result.stockName = '長榮';
-      result.stockCode = '2603';
-    }
+    const codeMatch = text.match(/[(（]?\s*([1-9]\d{3})\s*[)）]?/);
+    if (codeMatch) result.stockCode = codeMatch[1];
   }
 
   // 2. 日期提取 (如 2026/08/19 或 2024/08/19)
@@ -628,19 +617,6 @@ function parseStockTextFromOCR(text) {
         result.priceChange = parseFloat(numbers[numbers.length - 1]);
       }
     }
-  }
-
-  // 陽明 2609 樣本精準校正
-  if (result.stockCode === '2609' || result.stockName === '陽明') {
-    result.stockName = '陽明';
-    result.stockCode = '2609';
-    if (!result.currentPrice || result.currentPrice === 55.6) result.currentPrice = 59.0;
-    if (result.priceChange === null || result.priceChange === 0) result.priceChange = 2.8;
-    if (!result.ma5) result.ma5 = 54.58;
-    if (!result.ma10) result.ma10 = 52.91;
-    if (!result.ma20) result.ma20 = 51.81;
-    if (!result.ma60) result.ma60 = 51.66;
-    if (!result.volume) result.volume = 113981;
   }
 
   return result;
