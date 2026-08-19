@@ -17,55 +17,57 @@ const DEFAULT_GEMINI_MODELS = GEMINI_MODEL_OPTIONS
 const GEMINI_MODEL_CACHE_TTL = 5 * 60 * 1000;
 let geminiModelCache = null;
 
+import sampleYangMing from '../assets/sample_yangming.png';
+
 /**
  * 預設展示範例圖片列表
  */
 export const SAMPLE_CHARTS = [
   {
-    id: '/sample_yangming.png',
-    title: '陽明 (2609) - 航運多頭起漲',
-    subTitle: '突破整理平台，帶量攻堅',
+    id: sampleYangMing,
+    title: '陽明 (2609) - 回測均線整理',
+    subTitle: '測試季線 (MA60 65.58) 支撐力道',
     presetAnalysis: {
       stockName: '陽明',
       stockCode: '2609',
-      currentPrice: 59.0,
-      priceChange: 2.8,
-      changePercent: 4.98,
+      currentPrice: 66.6,
+      priceChange: -0.4,
+      changePercent: -0.60,
       latestDate: '2026/08/19',
       movingAverages: {
-        ma5: 54.58,
-        ma10: 52.91,
-        ma20: 51.81,
-        ma60: 51.66
+        ma5: 67.92,
+        ma10: 70.46,
+        ma20: 68.52,
+        ma60: 65.58
       },
-      volume: '113,981 張 (爆量長紅突破)',
+      volume: '28,172 張',
       detectedPatterns: [
         {
-          patternId: 'big_bull',
-          name: '大陽線 (爆量長紅突破)',
-          confidence: 95,
-          description: '收在今日最高價 59.0 元，實體飽滿且幾乎光頭收盤，突破近期所有均線反壓。'
+          patternId: 'dark_cloud_cover',
+          name: '烏雲罩頂 (回測季線整理)',
+          confidence: 92,
+          description: '今日小跌 -0.4 元 (-0.60%) 收在 66.6 元。股價跌破月線 (68.52)，目前正向下尋求季線 (65.58 元) 支撐。'
         },
         {
-          patternId: 'three_white_soldiers',
-          name: '多頭均線發散向上',
-          confidence: 90,
-          description: 'MA5(54.58) > MA10(52.91) > MA20(51.81) > MA60(51.66) 呈現標準多頭黃金排列。'
+          patternId: 'hammer',
+          name: '季線防守測試 (MA60 支撐)',
+          confidence: 88,
+          description: '下方季線 65.58 元為多方中長期重要防守生命線，若能守穩將有機會展開反彈。'
         }
       ],
       prediction: {
-        bullishProbability: 78,
-        neutralProbability: 16,
-        bearishProbability: 6,
-        sentimentSummary: '爆量長紅強勢突破，主力大單連續敲進，開啟波段主升攻擊段',
-        nextDayForecast: '明日預期高開挑戰 60.0 ~ 62.5 元整數關卡，量能若維持 8 萬張以上有望續創新高。',
-        supportLevels: [55.6, 54.58, 51.81],
-        resistanceLevels: [60.0, 63.0, 66.0],
+        bullishProbability: 32,
+        neutralProbability: 45,
+        bearishProbability: 23,
+        sentimentSummary: '短期均線下彎，股價回測季線重要防守關卡，進入震盪整理期',
+        nextDayForecast: '情境 A (偏多反彈)：季線 65.58 獲得強大支撐，帶量突破 68.0 展開反彈。\n情境 B (偏空下殺)：若有效跌破 65.58 且無法收復，將啟動停損賣壓測試前波低點。\n情境 C (區間震盪)：在 65.5 ~ 68.5 元之間量縮來回築底。',
+        supportLevels: [65.58, 64.2, 62.0],
+        resistanceLevels: [67.92, 68.52, 70.46],
         tradingStrategy: [
-          '🚀 【順勢追擊】：持股續抱，沿 5 日均線 (54.58) 順勢操作，未跌破 5 日線不停利。',
-          '🎯 【加碼點位】：若盤中有拉回 56.5 ~ 57.5 測試支撐不破，為絕佳加碼點。'
+          '🛡️ 【防守警戒】：以季線 65.58 元為最重要防守線，跌破應嚴格執行減碼或停損。',
+          '🎯 【短線觀察】：未突破月線 68.52 元前切勿追高，等待止跌訊號再行佈局。'
         ],
-        riskLevel: '低度風險 (強勢順勢波段)'
+        riskLevel: '中度風險 (回測季線整理波)'
       }
     }
   }

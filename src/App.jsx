@@ -27,9 +27,11 @@ export default function App() {
 
     // 預設載入「陽明 2609」範例讓使用者一打開即可直接看到精準分析與圖表
     const defaultSample = SAMPLE_CHARTS[0];
-    setAnalysisResult(defaultSample.presetAnalysis);
-    if (defaultSample.id.startsWith('/') || defaultSample.id.startsWith('data:')) {
-      setSelectedImage(defaultSample.id);
+    if (defaultSample) {
+      setAnalysisResult(defaultSample.presetAnalysis);
+      if (defaultSample.id) {
+        setSelectedImage(defaultSample.id);
+      }
     }
   }, []);
 
@@ -49,7 +51,7 @@ export default function App() {
 
   // 選擇圖片並開始分析
   const handleImageSelected = async (imageSource, title, presetData = null) => {
-    setSelectedImage((imageSource.startsWith('data:') || imageSource.startsWith('/')) ? imageSource : null);
+    setSelectedImage(imageSource || null);
     setIsAnalyzing(true);
     setAnalysisResult(null); // 清除舊資料，讓 UI 確實反映出正在更新
     setActiveTab('analyzer');
