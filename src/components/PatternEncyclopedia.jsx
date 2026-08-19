@@ -230,19 +230,41 @@ export default function PatternEncyclopedia({ selectedPatternId, onSelectPattern
       </div>
 
       {/* 形態卡片網格 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-        {filteredPatterns.map((pattern) => {
-          const isBull = pattern.sentiment === 'bullish';
-          const isBear = pattern.sentiment === 'bearish';
+      {filteredPatterns.length === 0 ? (
+        <div className="glass-panel" style={{ padding: '50px 20px', textAlign: 'center', margin: '20px 0' }}>
+          <BookOpen size={36} color="var(--text-muted)" style={{ margin: '0 auto 12px' }} />
+          <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#f8fafc', marginBottom: '6px' }}>
+            查無符合條件的 K 線形態
+          </h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '16px' }}>
+            請嘗試使用其他關鍵字搜尋，或重設形態維度與操作建議篩選。
+          </p>
+          <button
+            onClick={() => {
+              setSearchTerm('');
+              setCategoryFilter('all');
+              setSentimentFilter('all');
+            }}
+            className="btn-secondary"
+            style={{ fontSize: '0.85rem', padding: '6px 16px' }}
+          >
+            重設所有篩選條件
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+          {filteredPatterns.map((pattern) => {
+            const isBull = pattern.sentiment === 'bullish';
+            const isBear = pattern.sentiment === 'bearish';
 
-          return (
-            <div
-              key={pattern.id}
-              className="glass-card"
-              style={{
-                padding: '20px',
-                display: 'flex',
-                flexDirection: 'column',
+            return (
+              <div
+                key={pattern.id}
+                className="glass-card"
+                style={{
+                  padding: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
                 justifyContent: 'space-between',
                 borderLeft: `4px solid ${isBull ? 'var(--tw-bull)' : isBear ? 'var(--tw-bear)' : '#f59e0b'}`
               }}
@@ -322,10 +344,11 @@ export default function PatternEncyclopedia({ selectedPatternId, onSelectPattern
                   </span>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

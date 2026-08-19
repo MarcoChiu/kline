@@ -99,14 +99,15 @@ export default function ImageUploader({ onImageSelected, isAnalyzing, selectedIm
       {/* 拖曳上傳與貼上區域 */}
       <div
         className={`drop-zone ${isDragging ? 'dragging' : ''}`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
+        onDragOver={isAnalyzing ? undefined : handleDragOver}
+        onDragLeave={isAnalyzing ? undefined : handleDragLeave}
+        onDrop={isAnalyzing ? undefined : handleDrop}
+        onClick={() => !isAnalyzing && fileInputRef.current?.click()}
         style={{
           padding: selectedImage ? '16px' : '40px 20px',
           textAlign: 'center',
-          cursor: 'pointer',
+          cursor: isAnalyzing ? 'wait' : 'pointer',
+          opacity: isAnalyzing ? 0.7 : 1,
           position: 'relative',
           overflow: 'hidden'
         }}
