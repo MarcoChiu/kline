@@ -471,20 +471,35 @@ async function performAdvancedLocalAnalysis(base64Image) {
 
 /**
  * 裁切頂部 Header 區域並進行對比度增強與 OCR 文字解析
+ * 加上 15 秒超時防護，避免語言包下載卡住導致無限轉圈
  */
 async function extractTextFromImageHeader(dataUrl) {
-  try {
-    const croppedDataUrl = await cropAndEnhanceImageHeader(dataUrl);
-    const worker = await createWorker('chi_tra+eng');
-    const ret = await worker.recognize(croppedDataUrl);
-    await worker.terminate();
+  const TIMEOUT_MS = 15000;
+  
+  const ocrPromise = (async () => {
+    try {
+      const croppedDataUrl = await cropAndEnhanceImageHeader(dataUrl);
+      // 只用 eng：數字 + MA 標籤足夠，中文字靠後續正則更可靠
+      const worker = await createWorker('eng');
+      const ret = await worker.recognize(croppedDataUrl);
+      await worker.terminate();
+      const text = ret.data.text || '';
+      console.log('[OCR] 辨識原文:', text);
+      return parseStockTextFromOCR(text);
+    } catch (err) {
+      console.warn('[OCR] 處理失敗:', err.message);
+      return parseStockTextFromOCR('');
+    }
+  })();
 
-    const text = ret.data.text || '';
-    return parseStockTextFromOCR(text);
-  } catch (err) {
-    console.warn('OCR processing error:', err);
-    return parseStockTextFromOCR('');
-  }
+  const timeoutPromise = new Promise((resolve) => {
+    setTimeout(() => {
+      console.warn('[OCR] 超時 (15s)，跳過文字辨識，改用純像素分析');
+      resolve(parseStockTextFromOCR(''));
+    }, TIMEOUT_MS);
+  });
+
+  return Promise.race([ocrPromise, timeoutPromise]);
 }
 
 /**
