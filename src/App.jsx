@@ -26,12 +26,6 @@ export default function App() {
 
     const savedModel = localStorage.getItem('kline_gemini_model');
     if (savedModel) setSelectedModel(savedModel);
-
-    // 預設載入標準陽明截圖並執行真實即時辨識
-    const defaultSample = SAMPLE_CHARTS[0];
-    if (defaultSample && defaultSample.id) {
-      handleImageSelected(defaultSample.id, defaultSample.title);
-    }
   }, []);
 
   const handleSaveApiKey = (key) => {
@@ -54,8 +48,16 @@ export default function App() {
     setActiveTab('simulator');
   };
 
-  // 選擇圖片並開始分析 (即時調用 AI 進行真實辨識)
+  // 選擇圖片並開始分析 (需要 Gemini API Key)
   const handleImageSelected = async (imageSource, title) => {
+    // 沒有 API Key 時，直接彈出設定面板
+    if (!apiKey || apiKey.trim().length < 10) {
+      setSelectedImage(imageSource || null);
+      setActiveTab('analyzer');
+      setIsApiKeyModalOpen(true);
+      return;
+    }
+
     setSelectedImage(imageSource || null);
     setIsAnalyzing(true);
     setAnalysisResult(null);
@@ -84,31 +86,7 @@ export default function App() {
       });
     } catch (err) {
       console.error('辨識失敗:', err);
-      // 即使辨識失敗也顯示一個基本結果，讓使用者知道發生了什麼
-      setAnalysisResult({
-        stockName: '辨識失敗',
-        stockCode: '????',
-        currentPrice: 0,
-        priceChange: 0,
-        changePercent: 0,
-        latestDate: new Date().toISOString().slice(0, 10).replace(/-/g, '/'),
-        movingAverages: { ma5: 0, ma10: 0, ma20: 0, ma60: 0 },
-        volume: '未辨識',
-        detectedPatterns: [],
-        prediction: {
-          bullishProbability: 33,
-          neutralProbability: 34,
-          bearishProbability: 33,
-          sentimentSummary: `辨識過程發生錯誤：${err.message}。請嘗試填入 Gemini API Key 使用雲端 AI 辨識，或確認圖片格式正確。`,
-          nextDayForecast: '由於辨識失敗，無法產生走勢預測。建議填入 Gemini API Key 以獲得精準的 AI 視覺辨識結果。',
-          supportLevels: [0, 0, 0],
-          resistanceLevels: [0, 0, 0],
-          tradingStrategy: ['請填入 Gemini API Key 或重新上傳清晰的看盤截圖'],
-          riskLevel: '無法評估'
-        },
-        isLocalAnalyzed: true,
-        analyzedAt: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-      });
+      alert(`⚠️ 分析失敗：${err.message}`);
     } finally {
       setIsAnalyzing(false);
     }

@@ -107,8 +107,8 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
                   </>
                 )}
                 
-                <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '12px', background: isLocalAnalyzed ? 'rgba(59, 130, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)', color: isLocalAnalyzed ? '#60a5fa' : '#34d399', border: '1px solid currentColor' }}>
-                  {isLocalAnalyzed ? '⚡ 智慧 OCR + 像素特徵' : `✨ ${result.usedModel ? result.usedModel.replace('gemini-', 'Gemini ').replace('-exp-01-21', '').replace('-exp-02-05', '') : 'Gemini 2.0'} 大模型`}
+                <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid currentColor' }}>
+                  {`✨ ${result.usedModel ? result.usedModel.replace('gemini-', 'Gemini ').replace('-exp-01-21', '').replace('-exp-02-05', '') : 'Gemini AI'} 大模型`}
                 </span>
                 {analyzedAt && (
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
