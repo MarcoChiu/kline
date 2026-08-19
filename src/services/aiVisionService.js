@@ -77,11 +77,15 @@ async function callGeminiVision(base64Data, apiKey, selectedModel = 'auto') {
 3. 無絕對預測：不使用「一定會」、「保證」等字眼。分析明日走勢時，必須提供多套劇本與觸發條件。
 4. 風險控管優先：在任何推論中明確點出「失效點(Invalidation Level)」，跌破或突破哪個價位代表推論失敗，應採取防守。
 
-【重要數據提取守則】
-請優先仔細閱讀圖表最頂部的行情資訊文字列（例如: '陽明 (2609) ... 開 55.6 高 59 低 54.9 收 59 量(張) 113981 漲跌 2.8' 或右上角大字報價）。
-- 請精準提取 '收' 或現價後方的數字作為 currentPrice（如 59.0）。
-- 請精準提取 '漲跌' 後方的數字作為 priceChange（如 2.8）。
-- 請精準提取 MA5, MA10, MA20, MA60 各均線數值。
+【重要數據提取守則（極關鍵）】
+請優先仔細閱讀圖表最頂部的行情資訊文字列（例如: '陽明 (2609) 2026/08/19 開 55.6 高 59 低 54.9 收 59 量(張) 113981 漲跌 2.8' 或右上角大字報價）。
+- 【開盤價 openPrice】: 請提取 '開' 後面的數字（例如 55.6）。
+- 【最高價 highPrice】: 請提取 '高' 後面的數字（例如 59.0）。
+- 【最低價 lowPrice】: 請提取 '低' 後面的數字（例如 54.9）。
+- 【收盤價/現價 closePrice & currentPrice】: 請務必提取 '收' 或現價後方的數字（例如 59.0），絕對不可把 '開 55.6' 誤當成現價！
+- 【漲跌點數 priceChange】: 請提取 '漲跌' 後方的數字（例如 2.8），若為上漲給正數 2.8，若為下跌給負數 -1.5。
+- 【漲跌幅 changePercent】: 當日漲跌幅百分比（例如 4.98），若圖中無 %，請由 priceChange / (closePrice - priceChange) * 100 自動算出。
+- 【MA 均線】: 請精準提取 MA5, MA10, MA20, MA60 各均線數值。
 - 切勿把 Y 軸或歷史刻度的最高標記誤當成今日收盤價！
 
 請嚴格執行以下工作流程：
@@ -98,7 +102,11 @@ JSON 格式定義：
 {
   "stockName": "股票名稱（如 '陽明'，若找不到請填 '未知識別股'）",
   "stockCode": "股票代碼（如 '2609'，若無則填 '0000'）",
-  "currentPrice": 今日收盤價(數值，請找圖頂部 '收: xxx' 或現價，如 59.0),
+  "openPrice": 開盤價(數值，找 '開: xxx'，如 55.6),
+  "highPrice": 最高價(數值，找 '高: xxx'，如 59.0),
+  "lowPrice": 最低價(數值，找 '低: xxx'，如 54.9),
+  "closePrice": 收盤價(數值，找 '收: xxx'，如 59.0),
+  "currentPrice": 今日收盤現價(數值，必須與 closePrice 相同，如 59.0，千萬不要填成開盤價),
   "priceChange": 當日漲跌金額(數值，上漲為正數如 2.8，下跌為負數如 -1.5),
   "changePercent": 當日漲跌幅百分比(數值，例如 4.98 或 -2.15，純數字不帶 % 符號),
   "latestDate": "圖中日期",
@@ -169,8 +177,17 @@ JSON 格式定義：
 
       // 數值清洗與型別轉換
       if (typeof parsed.currentPrice === 'string') parsed.currentPrice = parseFloat(parsed.currentPrice.replace(/[^0-9.-]/g, '')) || 0;
+      if (typeof parsed.closePrice === 'string') parsed.closePrice = parseFloat(parsed.closePrice.replace(/[^0-9.-]/g, '')) || 0;
+      if (typeof parsed.openPrice === 'string') parsed.openPrice = parseFloat(parsed.openPrice.replace(/[^0-9.-]/g, '')) || 0;
+      if (typeof parsed.highPrice === 'string') parsed.highPrice = parseFloat(parsed.highPrice.replace(/[^0-9.-]/g, '')) || 0;
+      if (typeof parsed.lowPrice === 'string') parsed.lowPrice = parseFloat(parsed.lowPrice.replace(/[^0-9.-]/g, '')) || 0;
       if (typeof parsed.priceChange === 'string') parsed.priceChange = parseFloat(parsed.priceChange.replace(/[^0-9.-]/g, '')) || 0;
       if (typeof parsed.changePercent === 'string') parsed.changePercent = parseFloat(parsed.changePercent.replace(/[^0-9.-]/g, '')) || 0;
+
+      // 若有明確的 closePrice 則強制校正 currentPrice 為 closePrice (避免 AI 誤取開盤價)
+      if (parsed.closePrice && parsed.closePrice > 0) {
+        parsed.currentPrice = parsed.closePrice;
+      }
 
       // 自動推算漲跌與百分比兜底
       if (parsed.currentPrice && (!parsed.priceChange || parsed.priceChange === 0) && parsed.changePercent && parsed.changePercent !== 0) {
