@@ -1,14 +1,25 @@
-import React, { useState } from 'react';
-import { Play, Plus, RotateCcw, Trash2, TrendingUp, Info } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Play, Plus, RotateCcw, Trash2, TrendingUp, Info, Sparkles, X } from 'lucide-react';
 import { PatternSVG } from './PatternEncyclopedia';
+import { getPatternSimulatorCandles } from '../data/klinePatterns';
 
-export default function InteractiveCanvas() {
+export default function InteractiveCanvas({ loadedPattern, onClearLoadedPattern }) {
   const [candles, setCandles] = useState([
     { open: 70, close: 35, high: 28, low: 75, color: '#ef4444' }, // 紅 K
     { open: 36, close: 50, high: 32, low: 55, color: '#10b981' }, // 小綠 K
     { open: 50, close: 62, high: 45, low: 68, color: '#10b981' }, // 小綠 K
     { open: 60, close: 20, high: 15, low: 65, color: '#ef4444' }  // 長紅突破
   ]);
+
+  // 當從百科帶入特定型態時，自動載入該型態之 K 棒
+  useEffect(() => {
+    if (loadedPattern) {
+      const pCandles = getPatternSimulatorCandles(loadedPattern);
+      if (pCandles.length > 0) {
+        setCandles(pCandles);
+      }
+    }
+  }, [loadedPattern]);
 
   const [detectedSimPattern, setDetectedSimPattern] = useState('上升三法 (中繼續漲型態)');
 
@@ -148,6 +159,29 @@ export default function InteractiveCanvas() {
 
   return (
     <div className="glass-panel" style={{ padding: '24px', margin: '20px 0' }}>
+      {/* 若有從百科載入形態，顯示演練提示條 */}
+      {loadedPattern && (
+        <div style={{ background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.4)', borderRadius: '8px', padding: '10px 14px', marginBottom: '18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Sparkles size={18} color="#60a5fa" />
+            <span style={{ fontSize: '0.88rem', color: '#f8fafc' }}>
+              正在演練百科型態：<strong style={{ color: '#93c5fd' }}>【{loadedPattern.name}】</strong>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginLeft: '8px' }}>
+                （位階：{loadedPattern.locationType || '實戰起漲'}，勝率 {loadedPattern.winRate}%）
+              </span>
+            </span>
+          </div>
+          {onClearLoadedPattern && (
+            <button
+              onClick={onClearLoadedPattern}
+              style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              <X size={14} /> 退出此型態演練
+            </button>
+          )}
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>

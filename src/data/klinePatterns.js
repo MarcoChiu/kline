@@ -2,6 +2,22 @@
  * 完整 48 種經典 K 棒型態戰法圖鑑資料庫 (源自《錢線百分百》48種K棒型態戰法大全)
  * 全面轉化為極度白話、新手友善、具備實戰操盤建議的口語文案。
  */
+
+/**
+ * 將百科型態的 svgConfig 轉換為可載入模擬畫板的 K 棒陣列
+ */
+export function getPatternSimulatorCandles(pattern) {
+  if (!pattern?.svgConfig) return [];
+  const { type, bars, open, close, high, low, color } = pattern.svgConfig;
+  if (type === 'single') {
+    return [{ open, close, high, low, color }];
+  }
+  if (bars && Array.isArray(bars)) {
+    return bars.map(b => ({ ...b }));
+  }
+  return [];
+}
+
 export const KLINE_PATTERNS = [
   // ==========================================
   // 【第一維度：單一 K 棒戰法】(Single Bar)
@@ -13,6 +29,11 @@ export const KLINE_PATTERNS = [
     sentiment: 'bullish',
     signalStrength: 'high',
     winRate: 82,
+    isTopFrequent: true,
+    locationType: '突破平台 / 主升起漲段',
+    entryRule: '突破長期整理箱型或帶量開高時直接追價進場',
+    stopLossRule: '跌破長紅實體 1/2 處或開盤最低點立刻停損',
+    targetRule: '測量整理平台之 1:1 等距等長波段滿足點',
     chineseName: '大陽線 / 光頭光腳長紅',
     summary: '一根實心飽滿的大紅柱，幾乎沒有上下引線。代表買家從開盤一路爆買到收盤，氣勢完全碾壓空軍！',
     marketPsychology: '多頭部隊傾巢而出，市場搶購氣氛熱烈，空軍毫無招架之力，通常是行情發動或加速突破的強烈訊號！',
@@ -29,6 +50,11 @@ export const KLINE_PATTERNS = [
     sentiment: 'bearish',
     signalStrength: 'high',
     winRate: 83,
+    isTopFrequent: true,
+    locationType: '高檔做頭 / 破線逃命段',
+    entryRule: '跌破關鍵均線或支撐應立即出清多單避險',
+    stopLossRule: '若收盤重新站回長黑頂部則空單停損',
+    targetRule: '向下尋找前波歷史低點或長期均線防守',
     chineseName: '大陰線 / 長黑摜壓',
     summary: '一根超大根的綠色實體柱，從頭跌到尾。代表主力大戶不計成本瘋狂拋售，多頭被一網打盡。',
     marketPsychology: '市場湧現恐慌性賣壓，買盤徹底崩潰，多方全面棄守，接下來極可能展開連續修正。',
@@ -45,6 +71,11 @@ export const KLINE_PATTERNS = [
     sentiment: 'bullish',
     signalStrength: 'high',
     winRate: 76,
+    isTopFrequent: true,
+    locationType: '連續重挫 / 底部止跌段',
+    entryRule: '隔日開高或收紅確認止跌時進場試單',
+    stopLossRule: '跌破槌子線長下影線最低點立刻停損',
+    targetRule: '挑戰上方第一道下彎均線 (MA5/MA10)',
     chineseName: '槌子線 / 低檔探底神針',
     summary: '實體短短在頂部，下方拖著超過身體兩倍長的長下影線，出現在連續下跌後的低檔區。',
     marketPsychology: '空方盤中極力摜壓，但低檔爆發神祕強大買盤強行收復失土，代表空頭力竭、多方開始奪回主導權！',
@@ -61,6 +92,11 @@ export const KLINE_PATTERNS = [
     sentiment: 'bearish',
     signalStrength: 'medium-high',
     winRate: 73,
+    isTopFrequent: true,
+    locationType: '連續大漲 / 高檔力竭段',
+    entryRule: '隔日開低或跌破實體時全面停利賣出',
+    stopLossRule: '突破吊人線當日最高點則停損',
+    targetRule: '回測下方月線 (MA20) 或起漲平台',
     chineseName: '吊人線 / 高檔吊頸線',
     summary: '外觀與槌子相同，但出現在連續大漲後的高檔區。長下影線看似有買盤，實為主力出貨後的脆弱假象。',
     marketPsychology: '高檔籌碼已經嚴重鬆動，盤中曾出現劇烈殺盤，雖然尾盤勉強拉回，但多頭隨時可能引爆獲利了結雪崩！',
@@ -77,6 +113,11 @@ export const KLINE_PATTERNS = [
     sentiment: 'bearish',
     signalStrength: 'high',
     winRate: 79,
+    isTopFrequent: true,
+    locationType: '波段衝頂 / 高檔遇阻段',
+    entryRule: '盤中見長上影線逢高減碼，隔日收黑出清',
+    stopLossRule: '若後續爆量收復流星頂部則停損',
+    targetRule: '下探前波突破缺口或起漲整理平台',
     chineseName: '流星線 / 隕石墜落線',
     summary: '身體短短在下方，上方頂著長長的上影線。出現在連續上漲的高檔區，如流星劃破天際。',
     marketPsychology: '早盤多頭嘗試衝高，但在高點遭遇主力排山倒海的倒貨，直接打回原形，多頭氣數已盡！',
@@ -208,6 +249,11 @@ export const KLINE_PATTERNS = [
     sentiment: 'bullish',
     signalStrength: 'very-high',
     winRate: 84,
+    isTopFrequent: true,
+    locationType: '波段低檔 / 破曉反轉段',
+    entryRule: '今日長紅實體完全吞噬昨日長黑時，尾盤或隔日開盤積極買進',
+    stopLossRule: '跌破今日長紅最低點 (吞噬底部) 嚴格停損',
+    targetRule: '向上挑戰前波起跌點壓力區',
     chineseName: '多頭吞噬 / 陽包陰起漲',
     summary: '昨天是綠 K，今天一根巨大紅 K 從頭到腳把昨天的綠 K 身體完全「一口吞掉」！',
     marketPsychology: '多方主力以壓倒性的大資金全面反攻，瞬間吃掉昨天的所有空方籌碼，反轉確立！',
@@ -227,6 +273,11 @@ export const KLINE_PATTERNS = [
     sentiment: 'bearish',
     signalStrength: 'very-high',
     winRate: 85,
+    isTopFrequent: true,
+    locationType: '波段高檔 / 烏雲罩頂逃命段',
+    entryRule: '長黑吞沒前日長紅，果斷結清多單並建立避險空單',
+    stopLossRule: '站回長黑實體頂部則停損',
+    targetRule: '回測波段起漲點或半年線支撐',
     chineseName: '空頭吞噬 / 陰包陽斷頭',
     summary: '昨天是紅 K，今天一根巨大長黑（綠 K）把昨天的紅 K 實體完完全全吞沒覆蓋。',
     marketPsychology: '主力高檔無情倒貨，昨日的買方歡樂氣氛瞬間冰凍，籌碼全數轉為沉重套牢賣壓！',
@@ -469,6 +520,11 @@ export const KLINE_PATTERNS = [
     sentiment: 'bullish',
     signalStrength: 'very-high',
     winRate: 86,
+    isTopFrequent: true,
+    locationType: '波段底部 / 三日破曉段',
+    entryRule: '第三日長紅確認貫穿第一日長黑 1/2 以上時進場追價做多',
+    stopLossRule: '跌破中間星線之最低價立即停損',
+    targetRule: '展開波段大多頭反彈，挑戰季線 (MA60)',
     chineseName: '早晨之星 / 破曉晨星',
     summary: '第一天大綠 K $\\rightarrow$ 第二天向下跳空開出小星星 $\\rightarrow$ 第三天拔地而起收出一根大紅 K，直搗第一天核心！',
     marketPsychology: '黑夜即將過去，黎明破曉來到！三部曲完美演繹了「恐慌殺盤 $\\rightarrow$ 力量平衡 $\\rightarrow$ 多頭暴風反攻」！',
@@ -488,6 +544,11 @@ export const KLINE_PATTERNS = [
     sentiment: 'bearish',
     signalStrength: 'very-high',
     winRate: 87,
+    isTopFrequent: true,
+    locationType: '波段頭部 / 日落反轉段',
+    entryRule: '第三日長黑摜破第一日長紅 1/2 時全面停利並建立避險',
+    stopLossRule: '突破中間高檔星線最高點則停損',
+    targetRule: '向下回測整理箱型底部或年線',
     chineseName: '黃昏之星 / 日落西山',
     summary: '第一天大紅 K $\\rightarrow$ 第二天跳空開出高檔星星 $\\rightarrow$ 第三天大綠 K 狠狠砸下來，直接跌破第一天的一半以上。',
     marketPsychology: '多頭的狂歡宴會結束了！第三天的大長黑宣告主力高檔出貨完畢，接下來將迎接漫長黑夜！',
@@ -579,6 +640,11 @@ export const KLINE_PATTERNS = [
     sentiment: 'bullish',
     signalStrength: 'very-high',
     winRate: 85,
+    isTopFrequent: true,
+    locationType: '底部起漲 / 攻堅突破段',
+    entryRule: '第三根紅 K 伴隨量能溫和放大時進場佈局主升段',
+    stopLossRule: '跌破第一根紅 K 的開盤低點立即停損',
+    targetRule: '展開主升段波段行情，沿 5 日線順勢抱牢',
     chineseName: '紅三兵 / 連三紅攻堅',
     summary: '連續三天都收出穩健上升的實體紅 K，每天開在昨日實體內、收盤創新高，且影線極短。',
     marketPsychology: '多方買盤源源不絕，主力節奏分明地推升股價，正式進入波段主升攻擊段！',
@@ -598,6 +664,11 @@ export const KLINE_PATTERNS = [
     sentiment: 'bearish',
     signalStrength: 'very-high',
     winRate: 86,
+    isTopFrequent: true,
+    locationType: '高檔崩盤 / 連續破底段',
+    entryRule: '連三黑且步步破底，空方強勢，持股者無條件清倉避險',
+    stopLossRule: '站上第一隻烏鴉高點則空單出場',
+    targetRule: '向下尋找恐慌拋售窒息量低點',
     chineseName: '三隻烏鴉 / 連三黑破底',
     summary: '連續三天在高檔收出步步走低的大長黑（綠 K），每天收盤都摜破前日低點。',
     marketPsychology: '空方賣壓排山倒海而來，大戶奪門而出，盤面全面潰敗進入主跌段！',
@@ -688,6 +759,11 @@ export const KLINE_PATTERNS = [
     sentiment: 'bullish',
     signalStrength: 'high',
     winRate: 84,
+    isTopFrequent: true,
+    locationType: '多頭中繼 / 洗盤突破段',
+    entryRule: '第五根大陽線強勢突破前三日黑 K 高點時加碼做多',
+    stopLossRule: '跌破第一根長紅 K 最低點嚴格停損',
+    targetRule: '開啟波段第二波等長主升攻擊段',
     chineseName: '上升三法 / 中繼強勢整理',
     summary: '一根大長紅後，連續出現三根無力的小綠 K（皆未跌破第一根長紅低點），第五天再出一根大長紅突破天際！',
     marketPsychology: '主力發動攻擊後刻意壓盤休息三天洗盤甩轎，浮額沉澱後再次發動強勁攻勢！',

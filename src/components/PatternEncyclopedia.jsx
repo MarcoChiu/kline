@@ -119,8 +119,9 @@ export function PatternSVG({ config, width = 90, height = 110 }) {
   return null;
 }
 
-export default function PatternEncyclopedia({ selectedPatternId, onSelectPattern }) {
+export default function PatternEncyclopedia({ selectedPatternId, onSelectPattern, onLoadToSimulator }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [scopeFilter, setScopeFilter] = useState('top12'); // 'top12' | 'all'
   const [categoryFilter, setCategoryFilter] = useState('all'); // all | single | dual | multi
   const [sentimentFilter, setSentimentFilter] = useState('all'); // all | bullish | bearish | neutral
 
@@ -131,10 +132,11 @@ export default function PatternEncyclopedia({ selectedPatternId, onSelectPattern
       pattern.chineseName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       pattern.summary.toLowerCase().includes(searchTerm.toLowerCase());
 
+    const matchesScope = scopeFilter === 'all' || (scopeFilter === 'top12' && pattern.isTopFrequent);
     const matchesCategory = categoryFilter === 'all' || pattern.category === categoryFilter;
     const matchesSentiment = sentimentFilter === 'all' || pattern.sentiment === sentimentFilter;
 
-    return matchesSearch && matchesCategory && matchesSentiment;
+    return matchesSearch && matchesScope && matchesCategory && matchesSentiment;
   });
 
   return (
@@ -146,10 +148,10 @@ export default function PatternEncyclopedia({ selectedPatternId, onSelectPattern
           <div>
             <h2 style={{ fontSize: '1.25rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <BookOpen size={22} color="#3b82f6" />
-              <span>經典 K 線形態百科圖鑑</span>
+              <span>經典 K 線形態實戰作戰圖鑑</span>
             </h2>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-              收錄單 K、雙 K 組合、三 K 與波段形態圖解，涵蓋歷史勝率、多空力量物理學與實戰操盤守則
+              結合形態學物理、主力心理、位階判定與具體進出場 SOP，支援一鍵帶入模擬畫板演練
             </p>
           </div>
 
@@ -158,7 +160,7 @@ export default function PatternEncyclopedia({ selectedPatternId, onSelectPattern
             <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
             <input
               type="text"
-              placeholder="搜尋型態名稱或關鍵字..."
+              placeholder="搜尋型態名稱、戰法關鍵字..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
@@ -173,6 +175,27 @@ export default function PatternEncyclopedia({ selectedPatternId, onSelectPattern
               }}
             />
           </div>
+        </div>
+
+        {/* 核心實戰範圍切換 (Top 12 vs 48 全集) */}
+        <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setScopeFilter('top12')}
+            className={`btn-${scopeFilter === 'top12' ? 'primary' : 'secondary'}`}
+            style={{ fontSize: '0.88rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Zap size={16} color={scopeFilter === 'top12' ? '#fff' : '#f59e0b'} />
+            <span>🔥 實戰高頻必背 (TOP 12 精選)</span>
+          </button>
+
+          <button
+            onClick={() => setScopeFilter('all')}
+            className={`btn-${scopeFilter === 'all' ? 'primary' : 'secondary'}`}
+            style={{ fontSize: '0.88rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <BookOpen size={16} />
+            <span>📚 全部 48 種 K 棒形態大全</span>
+          </button>
         </div>
 
         {/* 分類按鈕列 (支援手機橫向滑動) */}
@@ -237,11 +260,12 @@ export default function PatternEncyclopedia({ selectedPatternId, onSelectPattern
             查無符合條件的 K 線形態
           </h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '16px' }}>
-            請嘗試使用其他關鍵字搜尋，或重設形態維度與操作建議篩選。
+            請嘗試切換「48 種形態大全」或重設篩選條件。
           </p>
           <button
             onClick={() => {
               setSearchTerm('');
+              setScopeFilter('all');
               setCategoryFilter('all');
               setSentimentFilter('all');
             }}
@@ -252,7 +276,7 @@ export default function PatternEncyclopedia({ selectedPatternId, onSelectPattern
           </button>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '18px' }}>
           {filteredPatterns.map((pattern) => {
             const isBull = pattern.sentiment === 'bullish';
             const isBear = pattern.sentiment === 'bearish';
@@ -265,85 +289,114 @@ export default function PatternEncyclopedia({ selectedPatternId, onSelectPattern
                   padding: '20px',
                   display: 'flex',
                   flexDirection: 'column',
-                justifyContent: 'space-between',
-                borderLeft: `4px solid ${isBull ? 'var(--tw-bull)' : isBear ? 'var(--tw-bear)' : '#f59e0b'}`
-              }}
-            >
-              <div>
-                {/* 頂部形態名稱與徽章 */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                  <div>
-                    <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#f8fafc' }}>
-                      {pattern.name}
-                    </h3>
-                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                      {pattern.chineseName}
+                  justifyContent: 'space-between',
+                  borderLeft: `4px solid ${isBull ? 'var(--tw-bull)' : isBear ? 'var(--tw-bear)' : '#f59e0b'}`
+                }}
+              >
+                <div>
+                  {/* 頂部形態名稱、位階與徽章 */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', gap: '10px' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#f8fafc', margin: 0 }}>
+                          {pattern.name}
+                        </h3>
+                        {pattern.isTopFrequent && (
+                          <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(245, 158, 11, 0.2)', color: '#fcd34d', border: '1px solid rgba(245, 158, 11, 0.4)', fontWeight: '700' }}>
+                            TOP 實戰
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        {pattern.chineseName}
+                      </div>
                     </div>
+
+                    <span
+                      style={{
+                        fontSize: '0.78rem',
+                        fontWeight: '700',
+                        padding: '4px 8px',
+                        borderRadius: '8px',
+                        background: isBull ? 'var(--tw-bull-bg)' : isBear ? 'var(--tw-bear-bg)' : 'rgba(245, 158, 11, 0.15)',
+                        color: isBull ? '#fca5a5' : isBear ? '#6ee7b7' : '#fcd34d',
+                        border: `1px solid ${isBull ? 'var(--tw-bull-border)' : isBear ? 'var(--tw-bear-border)' : 'rgba(245, 158, 11, 0.3)'}`,
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {isBull ? '🚀 找機會買進' : isBear ? '🔻 賣出/避險' : '⚠️ 觀望變盤'}
+                    </span>
                   </div>
 
-                  <span
-                    style={{
-                      fontSize: '0.8rem',
-                      fontWeight: '700',
-                      padding: '4px 10px',
-                      borderRadius: '8px',
-                      background: isBull ? 'var(--tw-bull-bg)' : isBear ? 'var(--tw-bear-bg)' : 'rgba(245, 158, 11, 0.15)',
-                      color: isBull ? '#fca5a5' : isBear ? '#6ee7b7' : '#fcd34d',
-                      border: `1px solid ${isBull ? 'var(--tw-bull-border)' : isBear ? 'var(--tw-bear-border)' : 'rgba(245, 158, 11, 0.3)'}`
-                    }}
-                  >
-                    {isBull ? '🚀 建議找機會買進' : isBear ? '🔻 建議賣出 / 不要買' : '⚠️ 建議先在旁邊看戲'}
-                  </span>
-                </div>
-
-                {/* SVG 圖解與全部內容直接展開 */}
-                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-start', margin: '16px 0', background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minWidth: '100px', width: '100%', marginBottom: '10px' }}>
-                    <PatternSVG config={pattern.svgConfig} width={100} height={110} />
+                  {/* 位階判定標籤 */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <span style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(59, 130, 246, 0.15)', color: '#93c5fd', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                      📍 適用位階：{pattern.locationType || (isBull ? '底部反轉 / 起漲段' : isBear ? '高檔反轉 / 逃命段' : '區間整理 / 方向待定')}
+                    </span>
                   </div>
-                  <div style={{ flex: 1, width: '100%' }}>
+
+                  {/* SVG 圖解與內容 */}
+                  <div style={{ margin: '14px 0', background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minWidth: '100px', width: '100%', marginBottom: '12px' }}>
+                      <PatternSVG config={pattern.svgConfig} width={105} height={115} />
+                    </div>
+
                     <div style={{ marginBottom: '12px' }}>
-                      <strong style={{ fontSize: '0.9rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                         白話圖解：
+                      <strong style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>
+                        📖 白話特徵：
                       </strong>
-                      <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: '1.6', marginTop: '4px' }}>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5', marginTop: '3px', margin: 0 }}>
                         {pattern.summary}
                       </p>
                     </div>
 
-                    <div style={{ marginBottom: '12px' }}>
-                      <strong style={{ fontSize: '0.9rem', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Zap size={14} /> 主力心態：
-                      </strong>
-                      <p style={{ fontSize: '0.9rem', color: '#94a3b8', lineHeight: '1.6', marginTop: '4px' }}>
-                        {pattern.marketPsychology}
-                      </p>
+                    {/* 實戰作戰 SOP 核心卡 */}
+                    <div style={{ background: 'rgba(0,0,0,0.4)', borderRadius: '8px', padding: '12px', border: '1px solid rgba(255,255,255,0.06)', marginTop: '10px' }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                        <Shield size={15} /> 實戰操盤 SOP 指引
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.82rem' }}>
+                        <div style={{ color: '#e2e8f0' }}>
+                          <span style={{ color: '#60a5fa', fontWeight: '600' }}>• 進場觸發：</span>
+                          {pattern.entryRule || pattern.tradingRules[0]}
+                        </div>
+                        <div style={{ color: '#e2e8f0' }}>
+                          <span style={{ color: '#f87171', fontWeight: '600' }}>• 停損防守：</span>
+                          {pattern.stopLossRule || pattern.tradingRules[1] || '跌破此形態最低點立即停損'}
+                        </div>
+                        {pattern.targetRule && (
+                          <div style={{ color: '#e2e8f0' }}>
+                            <span style={{ color: '#34d399', fontWeight: '600' }}>• 獲利目標：</span>
+                            {pattern.targetRule}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    <div>
-                      <strong style={{ fontSize: '0.9rem', color: '#34d399', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Shield size={14} /> 實戰建議：
-                      </strong>
-                      <ul style={{ paddingLeft: '22px', fontSize: '0.9rem', color: '#94a3b8', lineHeight: '1.6', margin: '4px 0 0 0' }}>
-                        {pattern.tradingRules?.map((rule, idx) => (
-                          <li key={idx} style={{ marginBottom: '4px' }}>{rule}</li>
-                        ))}
-                      </ul>
-                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* 底部勝率 */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)', marginTop: 'auto' }}>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Award size={16} color="#f59e0b" />
-                  <span>
-                    歷史上 {isBull ? '真的會上漲' : isBear ? '真的會暴跌' : '出現大轉折'} 的機率高達：
-                    <strong style={{ color: '#fff', fontSize: '1rem', marginLeft: '2px' }}>{pattern.winRate}%</strong>
-                  </span>
+                {/* 底部勝率與一鍵帶入畫板 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)', marginTop: 'auto', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Award size={15} color="#f59e0b" />
+                    <span>
+                      歷史勝率：<strong style={{ color: '#fff', fontSize: '0.95rem' }}>{pattern.winRate}%</strong>
+                    </span>
+                  </div>
+
+                  {onLoadToSimulator && (
+                    <button
+                      onClick={() => onLoadToSimulator(pattern)}
+                      className="btn-secondary"
+                      style={{ fontSize: '0.78rem', padding: '4px 10px', color: '#60a5fa', borderColor: 'rgba(59, 130, 246, 0.4)' }}
+                      title="將此形態直接載入至畫板，繼續插入 K 棒演練後續走勢"
+                    >
+                      🕹️ 帶入畫板演練
+                    </button>
+                  )}
                 </div>
-              </div>
+
               </div>
             );
           })}

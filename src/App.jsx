@@ -17,6 +17,8 @@ export default function App() {
   const [selectedModel, setSelectedModel] = useState('auto');
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
+  const [loadedSimulatorPattern, setLoadedSimulatorPattern] = useState(null);
+
   // 讀取儲存的 API Key 與模型設定
   useEffect(() => {
     const savedKey = localStorage.getItem('kline_gemini_api_key');
@@ -25,13 +27,10 @@ export default function App() {
     const savedModel = localStorage.getItem('kline_gemini_model');
     if (savedModel) setSelectedModel(savedModel);
 
-    // 預設載入「陽明 2609」範例讓使用者一打開即可直接看到精準分析與圖表
+    // 預設載入標準陽明截圖並執行真實即時辨識
     const defaultSample = SAMPLE_CHARTS[0];
-    if (defaultSample) {
-      setAnalysisResult(defaultSample.presetAnalysis);
-      if (defaultSample.id) {
-        setSelectedImage(defaultSample.id);
-      }
+    if (defaultSample && defaultSample.id) {
+      handleImageSelected(defaultSample.id, defaultSample.title);
     }
   }, []);
 
@@ -47,6 +46,12 @@ export default function App() {
   const handleSaveModel = (model) => {
     setSelectedModel(model);
     localStorage.setItem('kline_gemini_model', model);
+  };
+
+  // 從百科直接帶入特定型態至模擬測試畫板
+  const handleLoadToSimulator = (pattern) => {
+    setLoadedSimulatorPattern(pattern);
+    setActiveTab('simulator');
   };
 
   // 選擇圖片並開始分析 (即時調用 AI 進行真實辨識)
@@ -80,7 +85,6 @@ export default function App() {
       });
     } catch (err) {
       console.error('辨識失敗:', err);
-      alert('辨識失敗: ' + (err.message || '未知錯誤'));
     } finally {
       setIsAnalyzing(false);
     }
@@ -119,11 +123,16 @@ export default function App() {
         )}
 
         {activeTab === 'encyclopedia' && (
-          <PatternEncyclopedia />
+          <PatternEncyclopedia
+            onLoadToSimulator={handleLoadToSimulator}
+          />
         )}
 
         {activeTab === 'simulator' && (
-          <InteractiveCanvas />
+          <InteractiveCanvas
+            loadedPattern={loadedSimulatorPattern}
+            onClearLoadedPattern={() => setLoadedSimulatorPattern(null)}
+          />
         )}
 
       </main>
