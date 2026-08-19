@@ -104,7 +104,7 @@ export const KLINE_PATTERNS = [
       '隔日若開低或跌破吊人線實體，應無條件獲利了結或停利出場。',
       '切勿在吊人線出現時追高加碼。'
     ],
-    svgConfig: { type: 'single', open: 25, close: 20, high: 18, low: 85, color: '#10b981' }
+    svgConfig: { type: 'single', open: 20, close: 25, high: 18, low: 85, color: '#10b981' }
   },
   {
     id: 'shooting_star',
@@ -325,7 +325,7 @@ export const KLINE_PATTERNS = [
     ],
     svgConfig: {
       type: 'dual',
-      bars: [ { open: 70, close: 25, high: 20, low: 75, color: '#ef4444' }, { open: 18, close: 55, high: 15, low: 60, color: '#10b981' } ]
+      bars: [ { open: 80, close: 40, high: 30, low: 85, color: '#ef4444' }, { open: 15, close: 65, high: 10, low: 70, color: '#10b981' } ]
     }
   },
   {
