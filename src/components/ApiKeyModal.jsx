@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Key, ShieldCheck, ExternalLink, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { GEMINI_MODEL_OPTIONS, fetchAvailableGeminiModels, getGeminiModelCandidates } from '../services/aiVisionService';
 
 export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, selectedModel = 'auto', onSaveModel }) {
   const [inputKey, setInputKey] = useState(apiKey || '');
   const [model, setModel] = useState(selectedModel || 'auto');
   const [testStatus, setTestStatus] = useState(null); // null | 'testing' | 'success' | 'error'
   const [testMessage, setTestMessage] = useState('');
+
+  useEffect(() => {
+    setModel(selectedModel || 'auto');
+  }, [selectedModel]);
 
   if (!isOpen) return null;
 
@@ -20,48 +25,10 @@ export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, sel
     setTestMessage('正在測試與 Google Gemini 伺服器連線並獲取可用模型...');
 
     try {
-      const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${inputKey.trim()}`);
-      if (!listRes.ok) {
-        const errJson = await listRes.json().catch(() => ({}));
-        throw new Error(errJson.error?.message || `獲取模型列表失敗 (HTTP ${listRes.status})`);
-      }
-      
-      const listData = await listRes.json();
-      const models = listData.models || [];
-      
-      // 找尋支援 generateContent 的模型
-      const visionModels = models.filter(m => m.supportedGenerationMethods?.includes('generateContent'));
-      
-      if (visionModels.length === 0) {
-        throw new Error(`您的 API Key 沒有權限存取任何支援對話的模型。`);
-      }
-
-      // 排列優先順序
-      let preferredOrder = [
-        'models/gemini-2.0-flash',
-        'models/gemini-2.0-flash-thinking-exp-01-21',
-        'models/gemini-2.0-pro-exp-02-05',
-        'models/gemini-1.5-pro',
-        'models/gemini-1.5-flash',
-        'models/gemini-1.5-flash-latest',
-        'models/gemini-1.5-pro-latest'
-      ];
-
-      if (model && model !== 'auto') {
-        preferredOrder = [`models/${model}`, ...preferredOrder.filter(m => m !== `models/${model}`)];
-      }
-      
-      const modelsToTest = [];
-      for (const pref of preferredOrder) {
-        if (visionModels.some(m => m.name === pref)) {
-          modelsToTest.push(pref);
-        }
-      }
-      // 加入剩下的
-      for (const m of visionModels) {
-        if (!modelsToTest.includes(m.name) && (m.name.includes('flash') || m.name.includes('pro') || m.name.includes('gemini'))) {
-          modelsToTest.push(m.name);
-        }
+      const models = await fetchAvailableGeminiModels(inputKey.trim());
+      const modelsToTest = getGeminiModelCandidates(model, models);
+      if (modelsToTest.length === 0) {
+        throw new Error('您的 API Key 沒有權限存取可用的 Gemini Flash 視覺模型。');
       }
 
       let workingModel = null;
@@ -69,8 +36,8 @@ export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, sel
 
       for (const targetModel of modelsToTest) {
         try {
-          setTestMessage(`正在測試模型：${targetModel.replace('models/', '')}...`);
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/${targetModel}:generateContent?key=${inputKey.trim()}`, {
+          setTestMessage(`正在測試模型：${targetModel}...`);
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${inputKey.trim()}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -92,8 +59,9 @@ export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, sel
       }
 
       if (workingModel) {
+        setModel(workingModel);
         setTestStatus('success');
-        setTestMessage(`連線測試成功！已綁定最佳視覺模型：${workingModel.replace('models/', '')}`);
+        setTestMessage(`連線測試成功！已選用可用模型：${workingModel}`);
       } else {
         throw new Error(lastErrorMsg || '所有可用模型均測試失敗');
       }
@@ -150,7 +118,7 @@ export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, sel
               配置 Google Gemini API Key
             </h3>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              啟用 Gemini 2.0 Flash / Pro 深度多模態視覺辨識
+              啟用 Gemini Flash 多模態視覺辨識
             </p>
           </div>
         </div>
@@ -179,12 +147,9 @@ export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, sel
               cursor: 'pointer'
             }}
           >
-            <option value="auto">✨ 智慧自動選擇 (推薦 - 優先 2.0 Flash / Thinking)</option>
-            <option value="gemini-2.0-flash">🥇 Gemini 2.0 Flash (最新旗艦・秒速辨識)</option>
-            <option value="gemini-2.0-flash-thinking-exp-01-21">🧠 Gemini 2.0 Flash Thinking (深度推理思考版)</option>
-            <option value="gemini-2.0-pro-exp-02-05">👑 Gemini 2.0 Pro Experimental (最高智商頂規版)</option>
-            <option value="gemini-1.5-pro">💎 Gemini 1.5 Pro (經典專業長文本版)</option>
-            <option value="gemini-1.5-flash">⚡ Gemini 1.5 Flash (經典極速版)</option>
+            {GEMINI_MODEL_OPTIONS.map(({ value, label }) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
           </select>
         </div>
 
@@ -252,7 +217,7 @@ export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, sel
               rel="noreferrer"
               style={{ color: '#60a5fa', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '2px' }}
             >
-              前往 Google AI Studio 申請免費 Key <ExternalLink size={12} />
+                前往 Google AI Studio 申請免費 Key <ExternalLink size={12} />
             </a>
           </div>
         </div>

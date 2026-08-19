@@ -1,6 +1,6 @@
 # 📈 K-Line Master - 股票 K 線智能分析與走勢預判系統
 
-> 基於 **React + Vite + Google Gemini 2.0 Vision 多模態大模型 + 本地 WASM OCR** 的現代化股票 K 線圖表智能辨識、型態分析與隔日走勢預測工具。
+> 基於 **React + Vite + Google Gemini Flash 多模態大模型 + 本地 WASM OCR** 的現代化股票 K 線圖表智能辨識、型態分析與隔日走勢預測工具。
 
 🔗 **線上體驗直接點擊 (Live Demo)**：[https://marcochiu.github.io/kline/](https://marcochiu.github.io/kline/)
 
@@ -8,8 +8,9 @@
 
 ## 🌟 核心特色
 
-1. **⚡ Google Gemini 2.0 旗艦多模態視覺模型**
-   - 支援 `Gemini 2.0 Flash`、`Gemini 2.0 Flash Thinking 深度推理版`、`Gemini 2.0 Pro` 等頂級免費模型。
+1. **⚡ Google Gemini Flash 多模態視覺模型**
+   - 優先使用 `Gemini 2.5 Flash`，並支援 `Gemini 2.5 Flash-Lite` 與 API Key 實際可用的 Flash 模型自動備援。
+   - 免費層的模型、速率與每日配額依 Google AI Studio 帳號、地區與最新政策為準。
    - 秒速讀取看盤截圖中的股票名稱、代碼、開高低收價格、均線系統與成交量。
 
 2. **📖 完整 48 種經典 K 棒型態百科圖鑑**
@@ -23,7 +24,7 @@
    - 專為行動裝置量身打造，支援橫向滑動標籤列、卡片式格狀佈局、高質感深色玻璃擬態 (Glassmorphism)。
 
 5. **🛡️ 零成本 & 隱私安全**
-   - 支援 Google AI Studio 100% 免費 API Key，金鑰僅儲存於本地瀏覽器 `localStorage`，絕不上傳第三方伺服器。
+   - 支援 Google AI Studio 免費層 API Key，金鑰僅儲存於本地瀏覽器 `localStorage`，絕不上傳第三方伺服器。
    - 內建離線 Tesseract WASM 本地 OCR 備用引擎。
 
 ---
@@ -71,7 +72,7 @@ kline/
 │   ├── data/
 │   │   └── klinePatterns.js         # 48 種 K 棒型態戰法完整資料庫
 │   ├── services/
-│   │   └── aiVisionService.js       # Gemini 2.0 雲端 API & 本地 OCR 解析引擎
+│   │   └── aiVisionService.js       # Gemini Flash 雲端 API & 本地 OCR 解析引擎
 │   ├── styles/
 │   │   └── index.css                # 玻璃擬態樣式與行動端響應式 CSS
 │   ├── App.jsx                      # 主應用程式入口

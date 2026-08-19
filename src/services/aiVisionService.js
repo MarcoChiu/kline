@@ -1,6 +1,23 @@
 import { createWorker } from 'tesseract.js';
 import { KLINE_PATTERNS } from '../data/klinePatterns';
 
+export const GEMINI_MODEL_OPTIONS = [
+  { value: 'auto', label: '智慧自動選擇 (推薦)' },
+  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (品質與速度平衡)' },
+  { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite (最快、最省配額)' },
+  { value: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite (新一代高性價比)' },
+  { value: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash-Lite (新一代輕量模型)' },
+  { value: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash (較高品質)' },
+  { value: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash (較高品質)' },
+  { value: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash (目前旗艦)' }
+];
+
+const DEFAULT_GEMINI_MODELS = GEMINI_MODEL_OPTIONS
+  .filter(({ value }) => value !== 'auto')
+  .map(({ value }) => value);
+const GEMINI_MODEL_CACHE_TTL = 5 * 60 * 1000;
+let geminiModelCache = null;
+
 /**
  * 預設展示範例圖片列表
  */
@@ -147,44 +164,20 @@ JSON 格式定義：
   }
 }`;
 
-  // 根據使用者設定建立模型嘗試順序
-  let modelsToTry = [
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-thinking-exp-01-21',
-    'gemini-2.0-pro-exp-02-05',
-    'gemini-1.5-pro',
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-latest',
-    'gemini-1.5-pro-latest'
-  ];
-
-  if (selectedModel && selectedModel !== 'auto') {
-    // 將使用者指定的模型排在第一位
-    modelsToTry = [selectedModel, ...modelsToTry.filter(m => m !== selectedModel)];
+  let availableModels = [];
+  try {
+    availableModels = await fetchAvailableGeminiModels(apiKey);
+  } catch (err) {
+    console.warn('無法取得 Gemini 模型清單，改用內建備援清單:', err.message);
   }
+
+  const modelsToTry = getGeminiModelCandidates(selectedModel, availableModels);
 
   let lastError = null;
 
   for (const model of modelsToTry) {
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: prompt },
-              {
-                inlineData: {
-                  mimeType: mimeType,
-                  data: cleanBase64
-                }
-              }
-            ]
-          }]
-        })
-      });
-
+      const response = await requestGeminiModel(model, apiKey, prompt, mimeType, cleanBase64);
       if (!response.ok) {
         const errorJson = await response.json().catch(() => ({}));
         const msg = errorJson.error?.message || response.statusText;
@@ -195,22 +188,20 @@ JSON 格式定義：
       const data = await response.json();
       const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!rawText) {
-        lastError = new Error(`[${model}] 未回傳任何文字`);
+        const reason = data.candidates?.[0]?.finishReason || '未知原因';
+        lastError = new Error(`[${model}] 未回傳任何文字 (${reason})`);
         continue;
       }
 
-      // 針對 JSON 進行最強力的正規表達式萃取，無視前後廢話與 Markdown 標籤
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        console.error("Gemini 輸出非 JSON:", rawText);
+      let parsed;
+      try {
+        parsed = parseGeminiJson(rawText);
+      } catch (err) {
+        console.error('Gemini 輸出無法解析為 JSON:', rawText);
         lastError = new Error(`[${model}] 無法從回應中擷取 JSON 結構`);
         continue;
       }
-      
-      let cleanJson = jsonMatch[0];
-      cleanJson = cleanJson.replace(/,\s*([\}\]])/g, '$1');
 
-      const parsed = JSON.parse(cleanJson);
       return {
         ...parsed,
         isGeminiVision: true,
@@ -223,6 +214,155 @@ JSON 格式定義：
   }
 
   throw lastError || new Error('所有 Gemini 模型均無法解析，請檢查 API Key 是否正確');
+}
+
+export async function fetchAvailableGeminiModels(apiKey) {
+  const normalizedKey = apiKey.trim();
+  const now = Date.now();
+  if (geminiModelCache && geminiModelCache.apiKey === normalizedKey && geminiModelCache.expiresAt > now) {
+    return geminiModelCache.models;
+  }
+
+  const response = await fetchWithTimeout(
+    `https://generativelanguage.googleapis.com/v1beta/models?key=${normalizedKey}`,
+    {},
+    15000
+  );
+  if (!response.ok) {
+    const errorJson = await response.json().catch(() => ({}));
+    throw new Error(errorJson.error?.message || `獲取模型列表失敗 (HTTP ${response.status})`);
+  }
+
+  const data = await response.json();
+  const models = Array.isArray(data.models) ? data.models : [];
+  geminiModelCache = {
+    apiKey: normalizedKey,
+    models,
+    expiresAt: now + GEMINI_MODEL_CACHE_TTL
+  };
+  return models;
+}
+
+export function getGeminiModelCandidates(selectedModel = 'auto', availableModels = []) {
+  const selected = normalizeModelName(selectedModel);
+  const configuredModels = [...new Set([
+    ...(selected && selected !== 'auto' ? [selected] : []),
+    ...DEFAULT_GEMINI_MODELS
+  ])];
+  const availableFlashModels = [...new Set(
+    availableModels
+      .filter(model => model.supportedGenerationMethods?.includes('generateContent'))
+      .map(model => normalizeModelName(model.name))
+      .filter(isFreeVisionModel)
+  )];
+
+  if (availableFlashModels.length === 0) return configuredModels;
+
+  const availableSet = new Set(availableFlashModels);
+  const configuredAvailable = configuredModels.filter(model => availableSet.has(model));
+  const discoveredAvailable = availableFlashModels.filter(model => !configuredModels.includes(model));
+  return [...new Set([...configuredAvailable, ...discoveredAvailable])];
+}
+
+function normalizeModelName(modelName = '') {
+  return modelName.replace(/^models\//, '').trim();
+}
+
+function isFreeVisionModel(modelName) {
+  if (!modelName || !modelName.startsWith('gemini-')) return false;
+  if (/(?:-image|-tts|-live|embedding|robotics|computer-use|deep-research)/i.test(modelName)) return false;
+  return /flash/i.test(modelName);
+}
+
+async function requestGeminiModel(model, apiKey, prompt, mimeType, cleanBase64) {
+  const body = JSON.stringify({
+    contents: [{
+      parts: [
+        { text: prompt },
+        {
+          inlineData: {
+            mimeType,
+            data: cleanBase64
+          }
+        }
+      ]
+    }],
+    generationConfig: {
+      temperature: 0.2,
+      responseMimeType: 'application/json'
+    }
+  });
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const retryableStatuses = new Set([408, 429, 500, 502, 503, 504]);
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await fetchWithTimeout(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body
+      }, 45000);
+
+      if (response.ok || !retryableStatuses.has(response.status) || attempt === 1) return response;
+      await wait(800 * (attempt + 1));
+    } catch (err) {
+      if (attempt === 1) throw err;
+      await wait(800 * (attempt + 1));
+    }
+  }
+
+  throw new Error(`[${model}] 請求失敗`);
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function wait(milliseconds) {
+  return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+function parseGeminiJson(rawText) {
+  const normalizedText = rawText.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  try {
+    return JSON.parse(normalizedText);
+  } catch {
+    const start = normalizedText.indexOf('{');
+    if (start === -1) throw new Error('找不到 JSON 物件');
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (let index = start; index < normalizedText.length; index += 1) {
+      const character = normalizedText[index];
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (character === '\\') {
+          escaped = true;
+        } else if (character === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (character === '"') inString = true;
+      if (character === '{') depth += 1;
+      if (character === '}') depth -= 1;
+      if (depth === 0) {
+        const candidate = normalizedText.slice(start, index + 1).replace(/,\s*([\}\]])/g, '$1');
+        return JSON.parse(candidate);
+      }
+    }
+  }
+
+  throw new Error('JSON 結構不完整');
 }
 
 /**
@@ -299,7 +439,7 @@ async function performAdvancedLocalAnalysis(base64Image) {
     changePercent,
     latestDate: ocrData.latestDate || new Date().toISOString().slice(0, 10).replace(/-/g, '/'),
     movingAverages: { ma5, ma10, ma20, ma60 },
-    volume: ocrData.volume ? `${ocrData.volume.toLocaleString()} 張` : (volume || '174,538 張'),
+    volume: ocrData.volume ? `${ocrData.volume.toLocaleString()} 張` : '未辨識',
     detectedPatterns,
     prediction: {
       bullishProbability: bullishProb,
