@@ -134,12 +134,12 @@ JSON 格式定義：
 {
   "stockName": "股票名稱（若找不到請填 '未知識別股'）",
   "stockCode": "股票代碼（若無則填 '0000'）",
-  "currentPrice": 最新收盤價(數字，請找 '收: xxx' 或當前價格),
-  "priceChange": 最新漲跌價(數字，下跌為負數),
-  "changePercent": 最新漲跌幅百分比(數字),
+  "currentPrice": 最新收盤價(數值，請找圖中 '收: xxx' 或右上角大字價格，如 273.5),
+  "priceChange": 最新漲跌金額(數值，上漲為正數如 12.5，下跌為負數如 -3.0。請務必仔細辨識圖中漲跌或自行推算，不可隨意填 0),
+  "changePercent": 最新漲跌幅百分比(數值，例如 4.78 或 -1.25，純數字不帶 % 符號。若圖中未直接寫，請以 (priceChange / (currentPrice - priceChange)) * 100 自動算出),
   "latestDate": "圖中日期",
   "movingAverages": { "ma5": 數值, "ma10": 數值, "ma20": 數值, "ma60": 數值 },
-  "volume": "成交量描述",
+  "volume": "成交量描述(例如: 34,636 張)",
   "detectedPatterns": [
     {
       "patternId": "形態代碼",
@@ -201,6 +201,21 @@ JSON 格式定義：
         console.error('Gemini 輸出無法解析為 JSON:', rawText);
         lastError = new Error(`[${model}] 無法從回應中擷取 JSON 結構`);
         continue;
+      }
+
+      // 數值清洗與型別轉換
+      if (typeof parsed.currentPrice === 'string') parsed.currentPrice = parseFloat(parsed.currentPrice.replace(/[^0-9.-]/g, '')) || 0;
+      if (typeof parsed.priceChange === 'string') parsed.priceChange = parseFloat(parsed.priceChange.replace(/[^0-9.-]/g, '')) || 0;
+      if (typeof parsed.changePercent === 'string') parsed.changePercent = parseFloat(parsed.changePercent.replace(/[^0-9.-]/g, '')) || 0;
+
+      // 自動推算漲跌與百分比兜底
+      if (parsed.currentPrice && (!parsed.priceChange || parsed.priceChange === 0) && parsed.changePercent && parsed.changePercent !== 0) {
+        parsed.priceChange = +((parsed.currentPrice * parsed.changePercent) / (100 + parsed.changePercent)).toFixed(2);
+      } else if (parsed.currentPrice && parsed.priceChange && parsed.priceChange !== 0 && (!parsed.changePercent || parsed.changePercent === 0)) {
+        const prev = parsed.currentPrice - parsed.priceChange;
+        if (prev > 0) {
+          parsed.changePercent = +((parsed.priceChange / prev) * 100).toFixed(2);
+        }
       }
 
       return {

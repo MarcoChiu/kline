@@ -43,7 +43,11 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
   const displayName = customName || result.stockName;
   const displayCode = customCode || result.stockCode;
   const displayPrice = customPrice ? parseFloat(customPrice) : result.currentPrice;
-  const isUp = (priceChange ?? 0) >= 0;
+  const numChange = typeof priceChange === 'number' ? priceChange : (parseFloat(priceChange) || 0);
+  const numPercent = typeof changePercent === 'number' ? changePercent : (parseFloat(changePercent) || 0);
+  const isDown = numChange < 0 || (numChange === 0 && numPercent < 0);
+  const isFlat = numChange === 0 && numPercent === 0;
+  const isUp = !isDown && !isFlat;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', margin: '24px 0' }}>
@@ -57,7 +61,7 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 {isEditing ? (
-                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <input
                       type="text"
                       value={customName}
@@ -71,6 +75,13 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
                       onChange={(e) => setCustomCode(e.target.value)}
                       placeholder="代碼"
                       style={{ width: '70px', background: 'rgba(0,0,0,0.5)', border: '1px solid #3b82f6', borderRadius: '6px', padding: '4px 8px', color: '#fff', fontSize: '1rem', fontFamily: 'monospace' }}
+                    />
+                    <input
+                      type="text"
+                      value={customPrice}
+                      onChange={(e) => setCustomPrice(e.target.value)}
+                      placeholder="價格"
+                      style={{ width: '80px', background: 'rgba(0,0,0,0.5)', border: '1px solid #3b82f6', borderRadius: '6px', padding: '4px 8px', color: '#fff', fontSize: '1rem', fontFamily: 'monospace' }}
                     />
                     <button onClick={() => setIsEditing(false)} className="btn-primary" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>
                       完成
@@ -90,13 +101,13 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
                       onClick={() => setIsEditing(true)}
                       style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}
                     >
-                      校正股名
+                      校正股名與價格
                     </button>
                   </>
                 )}
                 
                 <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '12px', background: isLocalAnalyzed ? 'rgba(59, 130, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)', color: isLocalAnalyzed ? '#60a5fa' : '#34d399', border: '1px solid currentColor' }}>
-                  {isLocalAnalyzed ? '⚡ 智慧 OCR + 像素特徵' : `✨ ${result.usedModel ? result.usedModel.replace('gemini-', 'Gemini ').replace('-exp-01-21', '').replace('-exp-02-05', '') : 'Gemini Flash'} 大模型`}
+                  {isLocalAnalyzed ? '⚡ 智慧 OCR + 像素特徵' : `✨ ${result.usedModel ? result.usedModel.replace('gemini-', 'Gemini ').replace('-exp-01-21', '').replace('-exp-02-05', '') : 'Gemini 2.0'} 大模型`}
                 </span>
                 {analyzedAt && (
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -110,12 +121,12 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
             </div>
 
             <div style={{ borderLeft: '1px solid var(--border-subtle)', paddingLeft: '16px' }}>
-              <div style={{ fontSize: '1.8rem', fontWeight: '800', color: isUp ? 'var(--tw-bull)' : 'var(--tw-bear)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                {isUp ? <TrendingUp size={24} /> : <TrendingDown size={24} />}
+              <div style={{ fontSize: '1.8rem', fontWeight: '800', color: isDown ? 'var(--tw-bear)' : (isFlat ? '#e2e8f0' : 'var(--tw-bull)'), display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {isDown ? <TrendingDown size={24} /> : (isFlat ? <Minus size={24} color="#94a3b8" /> : <TrendingUp size={24} />)}
                 <span className="font-mono">{displayPrice}</span>
               </div>
-              <div style={{ fontSize: '0.9rem', fontWeight: '600', color: isUp ? '#fca5a5' : '#6ee7b7' }}>
-                {isUp ? `+${priceChange}` : priceChange} ({isUp ? `+${changePercent}%` : `${changePercent}%`})
+              <div style={{ fontSize: '0.9rem', fontWeight: '600', color: isDown ? '#6ee7b7' : (isFlat ? '#94a3b8' : '#fca5a5') }}>
+                {numChange > 0 ? `+${numChange}` : numChange} ({numPercent > 0 ? `+${numPercent}%` : `${numPercent}%`})
               </div>
             </div>
           </div>
