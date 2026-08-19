@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, Minus, Target, ShieldAlert, Cpu, Award, Zap, Compass, X, Shield } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Target, ShieldAlert, Cpu, Award, Zap, Compass, X, Shield, Globe, ExternalLink } from 'lucide-react';
 import { KLINE_PATTERNS } from '../data/klinePatterns';
 import { PatternSVG } from './PatternEncyclopedia';
 
@@ -9,6 +9,7 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
   const [customCode, setCustomCode] = React.useState('');
   const [customPrice, setCustomPrice] = React.useState('');
   const [activeModalPattern, setActiveModalPattern] = React.useState(null);
+  const [nightCatalyst, setNightCatalyst] = React.useState('neutral'); // 'neutral' | 'bullish' | 'bearish'
 
   React.useEffect(() => {
     if (result) {
@@ -236,7 +237,7 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
 
         {/* 右側：明日勝率雷達與情境推演 */}
         <div className="glass-panel" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Compass size={18} color="#06b6d4" />
               <span>明日走勢概率推演</span>
@@ -246,51 +247,163 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
             </span>
           </div>
 
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: '1.5' }}>
+          {/* 🌐 夜盤與美股期指跨市場共振觀測列 */}
+          <div style={{ background: 'rgba(0,0,0,0.35)', borderRadius: '10px', padding: '12px', border: '1px solid rgba(59, 130, 246, 0.25)', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+              <div style={{ fontSize: '0.82rem', fontWeight: '700', color: '#93c5fd', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Globe size={15} color="#60a5fa" />
+                <span>夜盤與美股連動因子：</span>
+              </div>
+
+              {/* 外部即時行情連結 */}
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <a
+                  href="https://tw.stock.yahoo.com/future/WTX&"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ fontSize: '0.75rem', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '3px', textDecoration: 'none', background: 'rgba(59, 130, 246, 0.15)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(59, 130, 246, 0.3)' }}
+                >
+                  🇹🇼 台指期夜盤 (WTX&) <ExternalLink size={11} />
+                </a>
+                <a
+                  href="https://tw.stock.yahoo.com/markets"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ fontSize: '0.75rem', color: '#a78bfa', display: 'flex', alignItems: 'center', gap: '3px', textDecoration: 'none', background: 'rgba(139, 92, 246, 0.15)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(139, 92, 246, 0.3)' }}
+                >
+                  🇺🇸 美股期指與國際盤 <ExternalLink size={11} />
+                </a>
+              </div>
+            </div>
+
+            {/* 晚上氛圍快速情境切換 */}
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setNightCatalyst('neutral')}
+                className="btn-secondary"
+                style={{
+                  fontSize: '0.76rem',
+                  padding: '4px 10px',
+                  background: nightCatalyst === 'neutral' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                  borderColor: nightCatalyst === 'neutral' ? '#fff' : 'var(--border-subtle)',
+                  color: nightCatalyst === 'neutral' ? '#fff' : 'var(--text-muted)'
+                }}
+              >
+                ⚖️ 基準 (純日 K)
+              </button>
+              <button
+                type="button"
+                onClick={() => setNightCatalyst('bullish')}
+                className="btn-secondary"
+                style={{
+                  fontSize: '0.76rem',
+                  padding: '4px 10px',
+                  background: nightCatalyst === 'bullish' ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.04)',
+                  borderColor: nightCatalyst === 'bullish' ? '#ef4444' : 'var(--border-subtle)',
+                  color: nightCatalyst === 'bullish' ? '#fca5a5' : '#f87171'
+                }}
+              >
+                🚀 美股/夜盤大漲 (+1%↑)
+              </button>
+              <button
+                type="button"
+                onClick={() => setNightCatalyst('bearish')}
+                className="btn-secondary"
+                style={{
+                  fontSize: '0.76rem',
+                  padding: '4px 10px',
+                  background: nightCatalyst === 'bearish' ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.04)',
+                  borderColor: nightCatalyst === 'bearish' ? '#10b981' : 'var(--border-subtle)',
+                  color: nightCatalyst === 'bearish' ? '#6ee7b7' : '#34d399'
+                }}
+              >
+                🔻 美股/夜盤重挫 (-1%↓)
+              </button>
+            </div>
+
+            {/* 動態連動提示 */}
+            {nightCatalyst === 'bullish' && (
+              <div style={{ marginTop: '8px', fontSize: '0.78rem', color: '#fca5a5', lineHeight: '1.4' }}>
+                ✨ <strong>夜盤助攻加權</strong>：美股期指或台指夜盤強勢，明日台股個股跳空開高挑戰「天花板」機率增加！可留意早盤量能換手。
+              </div>
+            )}
+            {nightCatalyst === 'bearish' && (
+              <div style={{ marginTop: '8px', fontSize: '0.78rem', color: '#6ee7b7', lineHeight: '1.4' }}>
+                ⚠️ <strong>夜盤逆風加權</strong>：美股或台指夜盤拉回下殺，明日需嚴防跳空開低回測「地板」防守價，早盤切勿衝動追價！
+              </div>
+            )}
+          </div>
+
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: '1.5' }}>
             {prediction.sentimentSummary}
           </p>
 
-          {/* 勝率進度條 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {/* 看多 */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
-                <span style={{ color: '#fca5a5', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <TrendingUp size={14} /> 🚀 容易上漲 / 建議買進
-                </span>
-                <span className="font-mono" style={{ color: '#fca5a5', fontWeight: '700' }}>{prediction.bullishProbability}%</span>
-              </div>
-              <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: `${prediction.bullishProbability}%`, height: '100%', background: 'linear-gradient(90deg, #f87171, #ef4444)', borderRadius: '4px', transition: 'width 1s ease' }} />
-              </div>
-            </div>
+          {/* 勝率進度條 (依據夜盤動態加權) */}
+          {(() => {
+            const rawBull = prediction.bullishProbability ?? 50;
+            const rawBear = prediction.bearishProbability ?? 30;
+            const rawNeut = prediction.neutralProbability ?? 20;
 
-            {/* 盤整 */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
-                <span style={{ color: '#fcd34d', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Minus size={14} /> ⚠️ 區間震盪 / 建議觀望
-                </span>
-                <span className="font-mono" style={{ color: '#fcd34d', fontWeight: '700' }}>{prediction.neutralProbability}%</span>
-              </div>
-              <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: `${prediction.neutralProbability}%`, height: '100%', background: 'linear-gradient(90deg, #fbbf24, #f59e0b)', borderRadius: '4px', transition: 'width 1s ease' }} />
-              </div>
-            </div>
+            let effBull = rawBull;
+            let effBear = rawBear;
+            let effNeut = rawNeut;
 
-            {/* 看空 */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
-                <span style={{ color: '#6ee7b7', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <TrendingDown size={14} /> 🔻 容易下跌 / 快逃或別買
-                </span>
-                <span className="font-mono" style={{ color: '#6ee7b7', fontWeight: '700' }}>{prediction.bearishProbability}%</span>
+            if (nightCatalyst === 'bullish') {
+              effBull = Math.min(rawBull + 18, 92);
+              effBear = Math.max(rawBear - 12, 3);
+              effNeut = Math.max(100 - effBull - effBear, 5);
+            } else if (nightCatalyst === 'bearish') {
+              effBear = Math.min(rawBear + 18, 92);
+              effBull = Math.max(rawBull - 12, 3);
+              effNeut = Math.max(100 - effBull - effBear, 5);
+            }
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {/* 看多 */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                    <span style={{ color: '#fca5a5', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <TrendingUp size={14} /> 🚀 容易上漲 / 建議買進
+                      {nightCatalyst === 'bullish' && <span style={{ fontSize: '0.7rem', color: '#fca5a5' }}>(夜盤+18%)</span>}
+                    </span>
+                    <span className="font-mono" style={{ color: '#fca5a5', fontWeight: '700' }}>{effBull}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ width: `${effBull}%`, height: '100%', background: 'linear-gradient(90deg, #f87171, #ef4444)', borderRadius: '4px', transition: 'width 0.5s ease' }} />
+                  </div>
+                </div>
+
+                {/* 盤整 */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                    <span style={{ color: '#fcd34d', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Minus size={14} /> ⚠️ 區間震盪 / 建議觀望
+                    </span>
+                    <span className="font-mono" style={{ color: '#fcd34d', fontWeight: '700' }}>{effNeut}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ width: `${effNeut}%`, height: '100%', background: 'linear-gradient(90deg, #fbbf24, #f59e0b)', borderRadius: '4px', transition: 'width 0.5s ease' }} />
+                  </div>
+                </div>
+
+                {/* 看空 */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                    <span style={{ color: '#6ee7b7', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <TrendingDown size={14} /> 🔻 容易下跌 / 快逃或別買
+                      {nightCatalyst === 'bearish' && <span style={{ fontSize: '0.7rem', color: '#6ee7b7' }}>(夜盤+18%)</span>}
+                    </span>
+                    <span className="font-mono" style={{ color: '#6ee7b7', fontWeight: '700' }}>{effBear}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ width: `${effBear}%`, height: '100%', background: 'linear-gradient(90deg, #34d399, #10b981)', borderRadius: '4px', transition: 'width 0.5s ease' }} />
+                  </div>
+                </div>
               </div>
-              <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: `${prediction.bearishProbability}%`, height: '100%', background: 'linear-gradient(90deg, #34d399, #10b981)', borderRadius: '4px', transition: 'width 1s ease' }} />
-              </div>
-            </div>
-          </div>
+            );
+          })()}
 
           <div style={{ marginTop: '20px', padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-subtle)' }}>
             <div style={{ fontSize: '0.8rem', color: '#60a5fa', fontWeight: '700', marginBottom: '4px' }}>明日走勢白話推演：</div>

@@ -116,8 +116,8 @@ JSON 格式定義：
     "bullishProbability": 偏多機率(0-100),
     "neutralProbability": 盤整機率(0-100),
     "bearishProbability": 偏空機率(0-100),
-    "sentimentSummary": "一句話總結目前籌碼與技術結構",
-    "nextDayForecast": "Step 3: 明日走勢推演 (請使用換行符號 \\n 條列 情境A、情境B、情境C)",
+    "sentimentSummary": "一句話總結目前籌碼、技術結構與跨市場共振預判",
+    "nextDayForecast": "Step 3: 明日走勢推演 (請使用換行符號 \\n 條列：\n【情境 A (偏多/夜盤收紅)】: 觸發條件與挑戰天花板壓力策略\n【情境 B (偏空/夜盤下殺)】: 觸發條件與地板防守策略\n【情境 C (區間/夜盤平盤)】: 整理築底策略)",
     "supportLevels": [支撐1, 支撐2, 支撐3],
     "resistanceLevels": [壓力1, 壓力2, 壓力3],
     "tradingStrategy": [
