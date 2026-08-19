@@ -25,49 +25,49 @@ import sampleYangMing from '../assets/sample_yangming.png';
 export const SAMPLE_CHARTS = [
   {
     id: sampleYangMing,
-    title: '陽明 (2609) - 回測均線整理',
-    subTitle: '測試季線 (MA60 65.58) 支撐力道',
+    title: '陽明 (2609) - 爆量長紅攻堅',
+    subTitle: '突破整理平台，帶量突破 (收 59.0 元, 漲跌 +2.8)',
     presetAnalysis: {
       stockName: '陽明',
       stockCode: '2609',
-      currentPrice: 66.6,
-      priceChange: -0.4,
-      changePercent: -0.60,
+      currentPrice: 59.0,
+      priceChange: 2.8,
+      changePercent: 4.98,
       latestDate: '2026/08/19',
       movingAverages: {
-        ma5: 67.92,
-        ma10: 70.46,
-        ma20: 68.52,
-        ma60: 65.58
+        ma5: 54.58,
+        ma10: 52.91,
+        ma20: 51.81,
+        ma60: 51.66
       },
-      volume: '28,172 張',
+      volume: '113,981 張',
       detectedPatterns: [
         {
-          patternId: 'dark_cloud_cover',
-          name: '烏雲罩頂 (回測季線整理)',
-          confidence: 92,
-          description: '今日小跌 -0.4 元 (-0.60%) 收在 66.6 元。股價跌破月線 (68.52)，目前正向下尋求季線 (65.58 元) 支撐。'
+          patternId: 'big_bull',
+          name: '大陽線 (爆量長紅突破)',
+          confidence: 96,
+          description: '今日強攻收在最高價 59.0 元 (+2.8 元，+4.98%)，帶量 113,981 張一口氣攻破所有均線反壓，買家完全掌控戰局！'
         },
         {
-          patternId: 'hammer',
-          name: '季線防守測試 (MA60 支撐)',
-          confidence: 88,
-          description: '下方季線 65.58 元為多方中長期重要防守生命線，若能守穩將有機會展開反彈。'
+          patternId: 'three_white_soldiers',
+          name: '多頭均線發散向上 (黃金排列)',
+          confidence: 92,
+          description: 'MA5(54.58) > MA10(52.91) > MA20(51.81) > MA60(51.66) 短中長期均線全面翻揚，多方攻擊動能強勁。'
         }
       ],
       prediction: {
-        bullishProbability: 32,
-        neutralProbability: 45,
-        bearishProbability: 23,
-        sentimentSummary: '短期均線下彎，股價回測季線重要防守關卡，進入震盪整理期',
-        nextDayForecast: '情境 A (偏多反彈)：季線 65.58 獲得強大支撐，帶量突破 68.0 展開反彈。\n情境 B (偏空下殺)：若有效跌破 65.58 且無法收復，將啟動停損賣壓測試前波低點。\n情境 C (區間震盪)：在 65.5 ~ 68.5 元之間量縮來回築底。',
-        supportLevels: [65.58, 64.2, 62.0],
-        resistanceLevels: [67.92, 68.52, 70.46],
+        bullishProbability: 82,
+        neutralProbability: 12,
+        bearishProbability: 6,
+        sentimentSummary: '爆量長紅強勢突破整理平台，均線多頭黃金排列，主力大單持續敲進',
+        nextDayForecast: '情境 A (偏多續攻)：延續今日攻勢開高挑戰 60.0 ~ 62.5 元整數關卡，成交量若能維持 8 萬張以上有望續創新高。\n情境 B (強勢回測)：若盤中有拉回測試 56.5 ~ 57.5 元支撐不破，為健康回測洗盤點。\n情境 C (極端轉弱)：若意外重挫跌破 5日線 (54.58 元) 則短線攻勢暫歇。',
+        supportLevels: [55.6, 54.58, 51.81],
+        resistanceLevels: [60.0, 63.0, 66.0],
         tradingStrategy: [
-          '🛡️ 【防守警戒】：以季線 65.58 元為最重要防守線，跌破應嚴格執行減碼或停損。',
-          '🎯 【短線觀察】：未突破月線 68.52 元前切勿追高，等待止跌訊號再行佈局。'
+          '🚀 【順勢續抱】：持股續抱，沿 5 日均線 (54.58 元) 順勢操作，未跌破 5 日線不停利。',
+          '🎯 【加碼點位】：若盤中有拉回 56.5 ~ 57.5 元測試支撐有守，為絕佳加碼點。'
         ],
-        riskLevel: '中度風險 (回測季線整理波)'
+        riskLevel: '低度風險 (強勢順勢多頭波)'
       }
     }
   }
@@ -120,6 +120,13 @@ async function callGeminiVision(base64Data, apiKey, selectedModel = 'auto') {
 3. 無絕對預測：不使用「一定會」、「保證」等字眼。分析明日走勢時，必須提供多套劇本與觸發條件。
 4. 風險控管優先：在任何推論中明確點出「失效點(Invalidation Level)」，跌破或突破哪個價位代表推論失敗，應採取防守。
 
+【重要數據提取守則】
+請優先仔細閱讀圖表最頂部的行情資訊文字列（例如: '陽明 (2609) ... 開 55.6 高 59 低 54.9 收 59 量(張) 113981 漲跌 2.8' 或右上角大字報價）。
+- 請精準提取 '收' 或現價後方的數字作為 currentPrice（如 59.0）。
+- 請精準提取 '漲跌' 後方的數字作為 priceChange（如 2.8）。
+- 請精準提取 MA5, MA10, MA20, MA60 各均線數值。
+- 切勿把 Y 軸或歷史刻度的最高標記誤當成今日收盤價！
+
 請嚴格執行以下工作流程：
 Step 1: 視覺特徵提取 (價格、量能、法人籌碼動向、技術指標現況)
 Step 2: 結構、趨勢與籌碼共振評估 (標示壓力/支撐、共振與背離分析、土洋動向)
@@ -132,14 +139,14 @@ Step 4: 嚴格的操作結論與風險提示 (強制標註防守點，提醒法�
 
 JSON 格式定義：
 {
-  "stockName": "股票名稱（若找不到請填 '未知識別股'）",
-  "stockCode": "股票代碼（若無則填 '0000'）",
-  "currentPrice": 最新收盤價(數值，請找圖中 '收: xxx' 或右上角大字價格，如 273.5),
-  "priceChange": 最新漲跌金額(數值，上漲為正數如 12.5，下跌為負數如 -3.0。請務必仔細辨識圖中漲跌或自行推算，不可隨意填 0),
-  "changePercent": 最新漲跌幅百分比(數值，例如 4.78 或 -1.25，純數字不帶 % 符號。若圖中未直接寫，請以 (priceChange / (currentPrice - priceChange)) * 100 自動算出),
+  "stockName": "股票名稱（如 '陽明'，若找不到請填 '未知識別股'）",
+  "stockCode": "股票代碼（如 '2609'，若無則填 '0000'）",
+  "currentPrice": 今日收盤價(數值，請找圖頂部 '收: xxx' 或現價，如 59.0),
+  "priceChange": 當日漲跌金額(數值，上漲為正數如 2.8，下跌為負數如 -1.5),
+  "changePercent": 當日漲跌幅百分比(數值，例如 4.98 或 -2.15，純數字不帶 % 符號),
   "latestDate": "圖中日期",
   "movingAverages": { "ma5": 數值, "ma10": 數值, "ma20": 數值, "ma60": 數值 },
-  "volume": "成交量描述(例如: 34,636 張)",
+  "volume": "成交量描述(例如: 113,981 張)",
   "detectedPatterns": [
     {
       "patternId": "形態代碼",
