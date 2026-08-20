@@ -5,20 +5,36 @@ export default function StockInput({ onStockSubmit, isAnalyzing }) {
   const [stockCode, setStockCode] = useState('');
   const [hoveredTooltip, setHoveredTooltip] = useState(null); // null | 'tw' | 'us'
   const [includeUS, setIncludeUS] = useState(() => {
-    const saved = localStorage.getItem('kline_include_us');
-    return saved !== null ? saved === 'true' : true;
+    try {
+      const saved = localStorage.getItem('kline_include_us');
+      return saved !== null ? saved === 'true' : true; // 預設勾選 (true)
+    } catch {
+      return true;
+    }
   });
   const [includeFutures, setIncludeFutures] = useState(() => {
-    const saved = localStorage.getItem('kline_include_futures');
-    return saved !== null ? saved === 'true' : true;
+    try {
+      const saved = localStorage.getItem('kline_include_futures');
+      return saved !== null ? saved === 'true' : true; // 預設勾選 (true)
+    } catch {
+      return true;
+    }
   });
 
   useEffect(() => {
-    localStorage.setItem('kline_include_us', includeUS.toString());
+    try {
+      localStorage.setItem('kline_include_us', includeUS.toString());
+    } catch (e) {
+      // 忽略無效儲存
+    }
   }, [includeUS]);
 
   useEffect(() => {
-    localStorage.setItem('kline_include_futures', includeFutures.toString());
+    try {
+      localStorage.setItem('kline_include_futures', includeFutures.toString());
+    } catch (e) {
+      // 忽略無效儲存
+    }
   }, [includeFutures]);
 
   const handleSubmit = () => {
