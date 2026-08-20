@@ -205,7 +205,58 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
         </div>
       </div>
 
-      {/* 2. 【核心重點】明日盤前/早鳥預約掛單建議 (Order Booking Matrix) */}
+      {/* 2. 跨市場聯動行情與共振分析板塊 */}
+      {((result.marketContext && ((result.marketContext.usMarkets && result.marketContext.usMarkets.length > 0) || (result.marketContext.futuresAndIndex && result.marketContext.futuresAndIndex.length > 0))) || prediction.marketContextImpact) && (
+        <div className="glass-panel" style={{ padding: '20px', border: '1px solid rgba(56, 189, 248, 0.3)', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(12, 32, 54, 0.75) 100%)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Globe size={18} color="#38bdf8" />
+              <h3 style={{ fontSize: '1.08rem', fontWeight: '700', color: '#f8fafc', margin: 0 }}>
+                跨市場聯動行情與共振分析
+              </h3>
+            </div>
+            <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '4px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+              台指期貨 / 美股與國際指數
+            </span>
+          </div>
+
+          {/* 數據卡片列：台指期與大盤優先，美股與國際指數接續 */}
+          {result.marketContext && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', marginBottom: '12px' }}>
+              {[...(result.marketContext.futuresAndIndex || []), ...(result.marketContext.usMarkets || [])].map((item, idx) => {
+                const itemIsDown = item.priceChange < 0;
+                const itemIsFlat = item.priceChange === 0;
+                return (
+                  <div key={idx} style={{ background: 'rgba(0,0,0,0.35)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: '600' }}>{item.name}</span>
+                      <span className="font-mono" style={{ fontSize: '0.7rem', color: '#64748b' }}>{item.symbol}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                      <span className="font-mono" style={{ fontSize: '1.05rem', fontWeight: '700', color: '#f8fafc' }}>
+                        {typeof item.price === 'number' ? item.price.toLocaleString() : item.price}
+                      </span>
+                      <span className="font-mono" style={{ fontSize: '0.82rem', fontWeight: '600', color: itemIsDown ? 'var(--tw-bear)' : (itemIsFlat ? '#94a3b8' : 'var(--tw-bull)') }}>
+                        {item.priceChange > 0 ? `+${item.priceChange}` : item.priceChange} ({item.changePercent > 0 ? `+${item.changePercent}%` : `${item.changePercent}%`})
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* AI 跨市場影響解析 */}
+          {prediction.marketContextImpact && (
+            <div style={{ background: 'rgba(56, 189, 248, 0.06)', padding: '12px 14px', borderRadius: '8px', border: '1px solid rgba(56, 189, 248, 0.2)', fontSize: '0.86rem', color: '#e0f2fe', lineHeight: '1.5' }}>
+              <strong style={{ color: '#38bdf8' }}>🌐 跨市場共振評估：</strong>
+              {prediction.marketContextImpact}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 3. 【核心重點】明日盤前/早鳥預約掛單建議 (Order Booking Matrix) */}
       <div className="glass-panel" style={{ padding: '22px', border: '1px solid rgba(59, 130, 246, 0.4)', background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

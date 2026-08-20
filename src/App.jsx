@@ -7,7 +7,7 @@ import InteractiveCanvas from './components/InteractiveCanvas';
 import ApiKeyModal from './components/ApiKeyModal';
 import BackToTop from './components/BackToTop';
 import { analyzeKlineFromData } from './services/aiVisionService';
-import { fetchStockData } from './services/yahooFinanceService';
+import { fetchStockData, fetchMarketContextData } from './services/yahooFinanceService';
 import confetti from 'canvas-confetti';
 
 export default function App() {
@@ -59,7 +59,7 @@ export default function App() {
   };
 
   // 選擇股號並自動獲取數據分析
-  const handleStockSubmit = async (stockCode) => {
+  const handleStockSubmit = async (stockCode, options = { includeUS: true, includeFutures: true }) => {
     if (!apiKey || apiKey.trim().length < 10) {
       setActiveTab('analyzer');
       setIsApiKeyModalOpen(true);
@@ -71,11 +71,14 @@ export default function App() {
     setActiveTab('analyzer');
 
     try {
-      // 1. 從 API 抓取歷史 K 線資料
-      const stockData = await fetchStockData(stockCode);
+      // 1. 並行抓取個股歷史 K 線與跨市場數據 (美股/期指)
+      const [stockData, marketContext] = await Promise.all([
+        fetchStockData(stockCode),
+        fetchMarketContextData(options)
+      ]);
       
       // 2. 傳遞結構化資料給 Gemini 進行精確文字分析
-      const result = await analyzeKlineFromData(stockData, apiKey, selectedModel, patternCount);
+      const result = await analyzeKlineFromData(stockData, apiKey, selectedModel, patternCount, marketContext);
       setAnalysisResult(result);
 
       confetti({

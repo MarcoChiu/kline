@@ -34,13 +34,13 @@ export async function analyzeKlineImage(base64Image, apiKey = null, selectedMode
 /**
  * 智能數據辨識入口 (純文本數據，無圖片)
  */
-export async function analyzeKlineFromData(stockData, apiKey = null, selectedModel = 'auto', patternCount = 12) {
+export async function analyzeKlineFromData(stockData, apiKey = null, selectedModel = 'auto', patternCount = 12, marketContext = null) {
   if (!apiKey || apiKey.trim().length < 10) {
     throw new Error('請先設定 Gemini API Key 才能進行數據分析');
   }
 
-  console.log('正在呼叫 Google Gemini Data API, 指定模型:', selectedModel, '型態數量:', patternCount);
-  const geminiResult = await callGeminiDataAnalysis(stockData, apiKey.trim(), selectedModel, patternCount);
+  console.log('正在呼叫 Google Gemini Data API, 指定模型:', selectedModel, '型態數量:', patternCount, '包含跨市場數據:', !!marketContext);
+  const geminiResult = await callGeminiDataAnalysis(stockData, apiKey.trim(), selectedModel, patternCount, marketContext);
   if (geminiResult) return geminiResult;
 
   throw new Error('Gemini API 未回傳有效結果，請稍後再試');
@@ -281,12 +281,28 @@ JSON 格式定義：
 /**
  * 呼叫 Google Gemini 進行純數據分析
  */
-async function callGeminiDataAnalysis(stockData, apiKey, selectedModel = 'auto', patternCount = 12) {
+async function callGeminiDataAnalysis(stockData, apiKey, selectedModel = 'auto', patternCount = 12, marketContext = null) {
   let patternsToUse = KLINE_PATTERNS;
   if (patternCount === 12) {
     patternsToUse = KLINE_PATTERNS.filter(p => p.isTopFrequent);
   }
   const patternNamesList = patternsToUse.map(p => `- ${p.chineseName} (ID: ${p.id})`).join('\n');
+
+  let marketContextSection = '';
+  if (marketContext) {
+    const usLines = (marketContext.usMarkets || []).map(m => `  * ${m.name} (${m.symbol}): 報價 ${m.price}, 漲跌 ${m.priceChange >= 0 ? '+' : ''}${m.priceChange} (${m.changePercent >= 0 ? '+' : ''}${m.changePercent}%)`);
+    const twLines = (marketContext.futuresAndIndex || []).map(m => `  * ${m.name} (${m.symbol}): 報價 ${m.price}, 漲跌 ${m.priceChange >= 0 ? '+' : ''}${m.priceChange} (${m.changePercent >= 0 ? '+' : ''}${m.changePercent}%)`);
+
+    if (usLines.length > 0 || twLines.length > 0) {
+      marketContextSection = `
+【跨市場即時/最新連動數據 (美股/期貨/大盤)】:
+${usLines.length > 0 ? `美股主要指數與關鍵 ADR:\n${usLines.join('\n')}\n` : ''}${twLines.length > 0 ? `台指期與加權大盤:\n${twLines.join('\n')}\n` : ''}
+【跨市場聯動分析重點】:
+- 請評估美股（特別是半導體費半 SOX、那指與重要 ADR）的漲跌對該股票明日早盤情緒的連動效應。
+- 請評估台指期與大盤強弱，判定是否構成大盤共振推升或逆勢下殺風險。
+`;
+    }
+  }
 
   const dataContext = `
 以下是股票代號 ${stockData.symbol} 近期的 OHLCV 歷史價格與均線資料 (JSON 格式):
@@ -296,10 +312,11 @@ ${JSON.stringify(stockData.historicalData, null, 2)}
 - 收盤價: ${stockData.latest.close}
 - 漲跌幅: ${stockData.latest.changePercent}%
 - MA5: ${stockData.latest.ma5}, MA10: ${stockData.latest.ma10}, MA20: ${stockData.latest.ma20}, MA60: ${stockData.latest.ma60}
+${marketContextSection}
 `;
 
   const prompt = `你是一位「嚴謹客觀的量化技術與籌碼分析師 (Strict Quantitative Technical & Chip Analyst)」。
-你的唯一職責是透過上述提供的真實 OHLCV 歷史數據與均線資料，進行純粹基於數據、線型、價量與資金動向的客觀分析。
+你的唯一職責是透過上述提供的真實 OHLCV 歷史數據、均線資料以及跨市場連動資訊，進行純粹基於數據、線型、價量與資金動向的客觀分析。
 
 核心原則：
 1. 絕對客觀，拒絕迎合：絕不為了討好而給出偏頗預測。如數據顯示籌碼鬆動或技術面弱勢，必須直言不諱地指出風險。
@@ -312,11 +329,12 @@ ${JSON.stringify(stockData.historicalData, null, 2)}
 2. **K 線型態**：分析最近幾天的開高低收，比對以下 ${patternCount} 種系統支援的型態，挑選最符合目前走勢的型態（請精準對應 ID 與名稱）：
 ${patternNamesList}
 3. **量能分析**：觀察近期的 volume (成交量)，是否有爆量長紅、爆量長黑、或量縮打底的現象？
+4. **跨市場連動**：若上方有提供美股/期貨數據，請精準評估其對該股明日開盤與早盤波動的實質影響。
 
 請嚴格執行以下工作流程：
 Step 1: 數據特徵提取 (價格、量能、最新 K 棒型態)
 Step 2: 均線與趨勢判定 (判斷多空排列與乖離)
-Step 3: 結構與趨勢共振評估 (標示壓力/支撐)
+Step 3: 結構、趨勢與跨市場共振評估 (標示壓力/支撐、美股/期貨對此標的的具體影響)
 Step 4: 明日走勢推演 (情境A偏多、情境B偏空、情境C盤整，各自的機率與條件)
 Step 5: 嚴格的操作結論與風險提示 (強制標註以均線或前低作為防守點)
 Step 6: 給新手的直白建議 (請根據多空勝率與型態真實評估)
@@ -352,6 +370,7 @@ JSON 格式定義：
     "neutralProbability": 盤整機率(0-100),
     "bearishProbability": 偏空機率(0-100),
     "sentimentSummary": "Step 3: 一句話總結目前均線結構與共振預判",
+    "marketContextImpact": "Step 3: 跨市場連動分析（結合美股/期指走勢，具體評估對此股明日早盤或波段的牽引力道，一句話至兩句話）",
     "nextDayForecast": "Step 4: 明日走勢推演 (請使用換行符號 \\n 條列：\\n【情境 A (偏多)】: ...\\n【情境 B (偏空)】: ...\\n【情境 C (區間)】: ...)",
     "supportLevels": [支撐1, 支撐2, 支撐3],
     "resistanceLevels": [壓力1, 壓力2, 壓力3],
@@ -432,6 +451,7 @@ ${dataContext}
         },
         volume: stockData.latest.formattedVolume || parsed.volume || `${stockData.latest.volume} 股`,
         meta: stockData.meta,
+        marketContext: marketContext || null,
         isGeminiVision: false,
         usedModel: model,
         analyzedAt: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })

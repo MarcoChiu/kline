@@ -164,3 +164,104 @@ export async function fetchStockData(stockCode, days = 90) {
     historicalData: recentData
   };
 }
+
+/**
+ * 抓取單一標的最新報價簡要數據
+ */
+export async function fetchSingleQuote(symbol, displayName = null) {
+  const range = '5d';
+  const interval = '1d';
+
+  for (const proxy of PROXIES) {
+    try {
+      const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}`;
+      const url = `${proxy}${encodeURIComponent(targetUrl)}`;
+      const response = await fetch(url);
+      if (!response.ok) continue;
+
+      const data = await response.json();
+      const result = data?.chart?.result?.[0];
+      if (!result) continue;
+
+      const meta = result.meta || {};
+      const quote = result.indicators?.quote?.[0] || {};
+      const closes = (quote.close || []).filter(c => c !== null && c !== undefined);
+
+      if (closes.length === 0) continue;
+
+      const latestClose = closes[closes.length - 1];
+      const prevClose = closes.length > 1 ? closes[closes.length - 2] : (meta.chartPreviousClose || latestClose);
+      const priceChange = Number((latestClose - prevClose).toFixed(2));
+      const changePercent = prevClose ? Number(((priceChange / prevClose) * 100).toFixed(2)) : 0;
+
+      return {
+        symbol,
+        name: displayName || meta.shortName || meta.symbol || symbol,
+        price: Number(latestClose.toFixed(2)),
+        priceChange,
+        changePercent
+      };
+    } catch (err) {
+      // 靜默嘗試下一個 Proxy
+    }
+  }
+
+  return null;
+}
+
+/**
+ * 依據勾選條件抓取美股與期貨市場連動數據
+ */
+export async function fetchMarketContextData({ includeFutures = true, includeUS = true } = {}) {
+  const tasks = [];
+  const results = {
+    futuresAndIndex: [],
+    usMarkets: []
+  };
+
+  // 1. 台股期現貨優先抓取
+  if (includeFutures) {
+    const twSymbols = [
+      { symbol: 'TXF=F', name: '台指期貨 (夜盤/近月)' },
+      { symbol: '^TWII', name: '加權指數 (大盤)' },
+      { symbol: '^TWOII', name: '櫃買指數 (OTC)' }
+    ];
+
+    twSymbols.forEach(({ symbol, name }) => {
+      tasks.push(
+        fetchSingleQuote(symbol, name).then(data => {
+          if (data) results.futuresAndIndex.push(data);
+        }).catch(() => {})
+      );
+    });
+  }
+
+  // 2. 美股與國際主要指數抓取
+  if (includeUS) {
+    const usSymbols = [
+      { symbol: '^SOX', name: '費城半導體' },
+      { symbol: '^IXIC', name: '那斯達克' },
+      { symbol: '^DJI', name: '道瓊工業' },
+      { symbol: '^GSPC', name: 'S&P 500' },
+      { symbol: 'TSM', name: '台積電 ADR' },
+      { symbol: 'NVDA', name: '輝達 (NVDA)' },
+      { symbol: '^N225', name: '日經 225' },
+      { symbol: '^HSI', name: '香港恒生' }
+    ];
+
+    usSymbols.forEach(({ symbol, name }) => {
+      tasks.push(
+        fetchSingleQuote(symbol, name).then(data => {
+          if (data) results.usMarkets.push(data);
+        }).catch(() => {})
+      );
+    });
+  }
+
+  if (tasks.length > 0) {
+    await Promise.allSettled(tasks);
+  }
+
+  return results;
+}
+
