@@ -5,6 +5,7 @@ import AnalysisResult from './components/AnalysisResult';
 import PatternEncyclopedia from './components/PatternEncyclopedia';
 import InteractiveCanvas from './components/InteractiveCanvas';
 import ApiKeyModal from './components/ApiKeyModal';
+import BackToTop from './components/BackToTop';
 import { analyzeKlineFromData } from './services/aiVisionService';
 import { fetchStockData } from './services/yahooFinanceService';
 import confetti from 'canvas-confetti';
@@ -164,6 +165,9 @@ export default function App() {
         patternCount={patternCount}
         onSavePatternCount={handleSavePatternCount}
       />
+
+      {/* Back to Top 浮動按鈕 */}
+      <BackToTop />
 
     </div>
   );

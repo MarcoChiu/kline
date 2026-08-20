@@ -47,6 +47,60 @@ export async function analyzeKlineFromData(stockData, apiKey = null, selectedMod
 }
 
 /**
+ * 畫板模擬手繪組合 AI 深度推演
+ */
+export async function analyzeSimulatedCandles(candles, apiKey = null, selectedModel = 'auto') {
+  if (!apiKey || apiKey.trim().length < 10) {
+    throw new Error('請先設定 Gemini API Key 才能進行 AI 走勢推演');
+  }
+
+  const prompt = `你是一位資深嚴謹客觀的量化技術與籌碼分析師。
+使用者在 K 線模擬畫板中手動組合了以下 ${candles.length} 根連續日 K 棒序列與成交量配置（依時間序由左至右）：
+
+${candles.map((c, i) => {
+  const type = c.color === '#ef4444' ? '陽線 (紅K)' : c.color === '#10b981' ? '陰線 (綠K)' : '十字星/變盤線';
+  const vol = c.volumeLevel === 'burst' ? '爆量 (巨大成交量)' : c.volumeLevel === 'dry' ? '窒息量 (極度萎縮)' : '一般均量';
+  const shadow = c.shadowType ? ` (特徵: ${c.shadowType})` : '';
+  return `Day ${i + 1}: ${type}${shadow} [開盤價座標: ${c.open}, 收盤價座標: ${c.close}, 最高價座標: ${c.high}, 最低價座標: ${c.low}] | 成交量態樣: ${vol}`;
+}).join('\n')}
+
+請根據經典形態學物理力道、量價關係（量增價漲、量縮價跌、量價背離或爆量滯漲）、主力洗盤或拉抬心態進行深度技術推演。
+
+請以嚴格的 JSON 格式回傳（使用繁體中文，禁止使用任何 Emoji 表情符號）：
+{
+  "detectedPatternName": "辨識出的核心形態名稱 (如：早晨之星破底翻、上升三法中繼突破、高檔射擊之星誘多...)",
+  "sentiment": "bullish" 或 "bearish" 或 "neutral",
+  "winRate": 85,
+  "marketPsychology": "主力心態與多空博弈深度解析 (說明大戶如何藉由這組走勢與量能進行洗盤、出貨或吸籌)",
+  "nextDayForecast": "明日推演劇本 (偏多、偏空、區間的三套應對劇本與觸發條件)",
+  "tradingStrategy": [
+    "操作策略要點 1 (進場點與買進條件)",
+    "操作策略要點 2 (關鍵失效防守點/停損底線)",
+    "操作策略要點 3 (波段獲利目標測量)"
+  ]
+}`;
+
+  const resolvedModel = resolveModelCandidate(selectedModel);
+  const modelsToTry = [resolvedModel, 'gemini-2.5-flash', 'gemini-2.0-flash'].filter((m, i, arr) => arr.indexOf(m) === i);
+
+  for (const model of modelsToTry) {
+    try {
+      const response = await requestGeminiModel(model, apiKey.trim(), prompt, null, null);
+      if (!response.ok) continue;
+      const json = await response.json();
+      const rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (rawText) {
+        return parseGeminiJson(rawText);
+      }
+    } catch (err) {
+      console.warn(`[${model}] 模擬推演失敗，嘗試後備模型:`, err);
+    }
+  }
+
+  throw new Error('AI 走勢推演失敗，請確認 API Key 是否有效。');
+}
+
+/**
  * 呼叫 Google Gemini Vision API
  */
 async function callGeminiVision(base64Data, apiKey, selectedModel = 'auto', patternCount = 12) {

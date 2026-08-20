@@ -1,323 +1,238 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Play, Plus, RotateCcw, Trash2, TrendingUp, Info, Sparkles, X, UploadCloud, Cpu, Image as ImageIcon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Play, Plus, RotateCcw, Trash2, TrendingUp, Info, Sparkles, X, Cpu, Bot, BarChart2, Shield, Target, Flame, Droplets, Scale } from 'lucide-react';
 import { PatternSVG } from './PatternEncyclopedia';
 import { getPatternSimulatorCandles, KLINE_PATTERNS } from '../data/klinePatterns';
-import { analyzeKlineImage } from '../services/aiVisionService';
+import { analyzeSimulatedCandles } from '../services/aiVisionService';
+
+// 8 大經典實戰劇本預設組合 (含量價配置)
+const PRESET_SCENARIOS = [
+  {
+    id: 'rising_three',
+    name: '上升三法 (中繼續漲)',
+    tag: '🚀 中繼突破',
+    candles: [
+      { open: 70, close: 35, high: 28, low: 75, color: '#ef4444', volumeLevel: 'burst', shadowType: '長紅實體' },
+      { open: 36, close: 48, high: 32, low: 52, color: '#10b981', volumeLevel: 'dry', shadowType: '小黑壓回' },
+      { open: 48, close: 58, high: 44, low: 62, color: '#10b981', volumeLevel: 'dry', shadowType: '縮量洗盤' },
+      { open: 58, close: 20, high: 15, low: 62, color: '#ef4444', volumeLevel: 'burst', shadowType: '帶量長紅突破' }
+    ]
+  },
+  {
+    id: 'morning_star',
+    name: '早晨之星 (破曉反轉底)',
+    tag: '🟢 底部築底',
+    candles: [
+      { open: 25, close: 65, high: 20, low: 70, color: '#10b981', volumeLevel: 'burst', shadowType: '恐慌長黑' },
+      { open: 75, close: 75, high: 65, low: 85, color: '#f59e0b', volumeLevel: 'dry', shadowType: '跳空十字星' },
+      { open: 70, close: 30, high: 25, low: 75, color: '#ef4444', volumeLevel: 'burst', shadowType: '爆量貫穿長紅' }
+    ]
+  },
+  {
+    id: 'evening_star',
+    name: '黃昏夜星 (高檔見頂斷頭)',
+    tag: '🔴 高檔反轉',
+    candles: [
+      { open: 65, close: 25, high: 20, low: 70, color: '#ef4444', volumeLevel: 'burst', shadowType: '最後衝刺長紅' },
+      { open: 15, close: 15, high: 8, low: 25, color: '#f59e0b', volumeLevel: 'burst', shadowType: '高檔懸空十字' },
+      { open: 25, close: 68, high: 22, low: 72, color: '#10b981', volumeLevel: 'burst', shadowType: '無情貫穿長黑' }
+    ]
+  },
+  {
+    id: 'bullish_engulfing',
+    name: '多頭吞噬 (陽包陰反攻)',
+    tag: '🟢 止跌轉強',
+    candles: [
+      { open: 35, close: 60, high: 30, low: 65, color: '#10b981', volumeLevel: 'normal', shadowType: '一般跌勢黑K' },
+      { open: 68, close: 25, high: 20, low: 72, color: '#ef4444', volumeLevel: 'burst', shadowType: '全包覆大長紅' }
+    ]
+  },
+  {
+    id: 'bearish_engulfing',
+    name: '空頭吞噬 (陰包陽斷頭)',
+    tag: '🔴 主力倒貨',
+    candles: [
+      { open: 60, close: 35, high: 30, low: 65, color: '#ef4444', volumeLevel: 'normal', shadowType: '一般漲勢紅K' },
+      { open: 28, close: 70, high: 22, low: 75, color: '#10b981', volumeLevel: 'burst', shadowType: '全吞沒大長黑' }
+    ]
+  },
+  {
+    id: 'shooting_star',
+    name: '射擊之星 (高檔假突破爆量倒貨)',
+    tag: '🔴 避險停利',
+    candles: [
+      { open: 70, close: 40, high: 35, low: 75, color: '#ef4444', volumeLevel: 'normal', shadowType: '前置拉抬紅K' },
+      { open: 35, close: 42, high: 10, low: 45, color: '#10b981', volumeLevel: 'burst', shadowType: '極長上引線' }
+    ]
+  },
+  {
+    id: 'hammer_bottom',
+    name: '槌子探底神針 (下影線打底)',
+    tag: '🟢 底部承接',
+    candles: [
+      { open: 20, close: 50, high: 15, low: 55, color: '#10b981', volumeLevel: 'normal', shadowType: '連跌黑K' },
+      { open: 55, close: 50, high: 45, low: 88, color: '#ef4444', volumeLevel: 'burst', shadowType: '極長下引線' }
+    ]
+  },
+  {
+    id: 'three_soldiers',
+    name: '紅三兵 (強勢攻堅主升段)',
+    tag: '🚀 強勢攻擊',
+    candles: [
+      { open: 75, close: 55, high: 50, low: 80, color: '#ef4444', volumeLevel: 'normal', shadowType: '起步小紅' },
+      { open: 55, close: 35, high: 30, low: 60, color: '#ef4444', volumeLevel: 'normal', shadowType: '墊高中紅' },
+      { open: 35, close: 15, high: 10, low: 40, color: '#ef4444', volumeLevel: 'burst', shadowType: '帶量大長紅' }
+    ]
+  }
+];
 
 export default function InteractiveCanvas({ loadedPattern, onClearLoadedPattern, apiKey, selectedModel, onOpenApiKeyModal }) {
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const [candles, setCandles] = useState([
-    { open: 70, close: 35, high: 28, low: 75, color: '#ef4444' }, // 紅 K
-    { open: 36, close: 50, high: 32, low: 55, color: '#10b981' }, // 小綠 K
-    { open: 50, close: 62, high: 45, low: 68, color: '#10b981' }, // 小綠 K
-    { open: 60, close: 20, high: 15, low: 65, color: '#ef4444' }  // 長紅突破
-  ]);
+  const [candles, setCandles] = useState(PRESET_SCENARIOS[0].candles);
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiReport, setAiReport] = useState(null);
 
   // 當從百科帶入特定型態時，自動載入該型態之 K 棒
   useEffect(() => {
     if (loadedPattern) {
       const pCandles = getPatternSimulatorCandles(loadedPattern);
       if (pCandles.length > 0) {
-        setCandles(pCandles);
+        setCandles(pCandles.map(c => ({
+          ...c,
+          volumeLevel: c.volumeLevel || 'normal',
+          shadowType: c.shadowType || '自訂型態'
+        })));
+        setAiReport(null);
       }
     }
   }, [loadedPattern]);
 
-  const [detectedSimPattern, setDetectedSimPattern] = useState('上升三法 (中繼續漲型態)');
-
-  // 新增紅 K
-  const addBullCandle = () => {
-    setCandles(prev => [...prev, { open: 60, close: 25, high: 20, low: 65, color: '#ef4444' }]);
+  // 切換某根 K 棒的成交量狀態 (normal -> burst -> dry)
+  const toggleVolume = (index) => {
+    setCandles(prev => prev.map((c, i) => {
+      if (i !== index) return c;
+      const nextVol = c.volumeLevel === 'normal' ? 'burst' : c.volumeLevel === 'burst' ? 'dry' : 'normal';
+      return { ...c, volumeLevel: nextVol };
+    }));
   };
 
-  // 新增綠 K
-  const addBearCandle = () => {
-    setCandles(prev => [...prev, { open: 25, close: 65, high: 20, low: 70, color: '#10b981' }]);
-  };
+  // 插入特定類型 K 棒
+  const addCandle = (type) => {
+    let newCandle = { open: 60, close: 25, high: 20, low: 65, color: '#ef4444', volumeLevel: 'normal', shadowType: '標準紅K' };
+    
+    switch (type) {
+      case 'bull': // 長紅
+        newCandle = { open: 65, close: 20, high: 15, low: 70, color: '#ef4444', volumeLevel: 'burst', shadowType: '大長紅' };
+        break;
+      case 'bear': // 長黑
+        newCandle = { open: 20, close: 65, high: 15, low: 70, color: '#10b981', volumeLevel: 'burst', shadowType: '大長黑' };
+        break;
+      case 'doji': // 十字星
+        newCandle = { open: 45, close: 45, high: 20, low: 75, color: '#f59e0b', volumeLevel: 'dry', shadowType: '十字星' };
+        break;
+      case 'upper_shadow': // 長上引線 (射擊之星)
+        newCandle = { open: 45, close: 50, high: 12, low: 52, color: '#10b981', volumeLevel: 'burst', shadowType: '長上引線' };
+        break;
+      case 'lower_shadow': // 長下引線 (槌子線)
+        newCandle = { open: 35, close: 30, high: 25, low: 75, color: '#ef4444', volumeLevel: 'burst', shadowType: '長下引線' };
+        break;
+      case 'gap_up': // 向上跳空紅
+        newCandle = { open: 30, close: 12, high: 8, low: 35, color: '#ef4444', volumeLevel: 'burst', shadowType: '跳空突破紅' };
+        break;
+      case 'gap_down': // 向下跳空黑
+        newCandle = { open: 55, close: 78, high: 52, low: 85, color: '#10b981', volumeLevel: 'burst', shadowType: '跳空殺跌黑' };
+        break;
+      default:
+        break;
+    }
 
-  // 新增十字星
-  const addDoji = () => {
-    setCandles(prev => [...prev, { open: 45, close: 45, high: 20, low: 75, color: '#f59e0b' }]);
+    setCandles(prev => [...prev, newCandle]);
+    setAiReport(null);
   };
 
   // 撤銷最後一根
   const handleUndo = () => {
     setCandles(prev => prev.slice(0, -1));
+    setAiReport(null);
   };
 
   // 清空
   const handleClearAll = () => {
     setCandles([]);
+    setAiReport(null);
   };
 
-  // 重設為經典上升三法
-  const handleReset = () => {
-    setCandles([
-      { open: 70, close: 35, high: 28, low: 75, color: '#ef4444' },
-      { open: 36, close: 50, high: 32, low: 55, color: '#10b981' },
-      { open: 50, close: 62, high: 45, low: 68, color: '#10b981' },
-      { open: 60, close: 20, high: 15, low: 65, color: '#ef4444' }
-    ]);
+  // 載入經典劇本
+  const loadScenario = (scenario) => {
+    setCandles(scenario.candles.map(c => ({ ...c })));
+    setAiReport(null);
   };
 
-  // 處理圖片分析並載入
-  const processImage = async (imageSource) => {
+  // 呼叫 Gemini AI 深度推演當前手繪畫板組合
+  const handleRunAiAnalysis = async () => {
+    if (candles.length === 0) {
+      alert('請先在畫板中插入至少 1 根 K 棒！');
+      return;
+    }
+
     if (!apiKey || apiKey.trim().length < 10) {
       if (onOpenApiKeyModal) onOpenApiKeyModal();
       return;
     }
 
-    setIsAnalyzing(true);
+    setIsAiAnalyzing(true);
+    setAiReport(null);
+
     try {
-      let base64Data = imageSource;
-      if (imageSource && !imageSource.startsWith('data:')) {
-        const res = await fetch(imageSource);
-        const blob = await res.blob();
-        base64Data = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.readAsDataURL(blob);
-        });
-      }
-
-      const result = await analyzeKlineImage(base64Data, apiKey, selectedModel || 'gemini-2.5-flash', 12);
-      
-      if (result && result.detectedPatterns && result.detectedPatterns.length > 0) {
-        const topPattern = result.detectedPatterns[0];
-        let matchedEncyclopedia = KLINE_PATTERNS.find(p => 
-          p.id === topPattern.patternId || 
-          (topPattern.name && p.name && topPattern.name.toLowerCase().includes(p.name.toLowerCase())) || 
-          (topPattern.name && p.chineseName && topPattern.name.includes(p.chineseName))
-        );
-
-        if (matchedEncyclopedia) {
-          let pCandles = getPatternSimulatorCandles(matchedEncyclopedia);
-          if (pCandles.length > 0) {
-            
-            // 智能情境還原 (Smart Context Generation)
-            // 如果辨識出的是單一 K 棒 (例如十字星)，為它加上前置的趨勢背景，看起來才像真實走勢！
-            if (matchedEncyclopedia.category === 'single' || pCandles.length === 1) {
-              const contextCandles = [];
-              if (matchedEncyclopedia.sentiment === 'bullish') {
-                // 偏多型態 (例如底部十字星或槌子線)，代表之前是跌勢
-                contextCandles.push({ open: 20, close: 40, high: 15, low: 45, color: '#10b981' }); // 長綠
-                contextCandles.push({ open: 42, close: 60, high: 38, low: 65, color: '#10b981' }); // 長綠
-                contextCandles.push({ open: 62, close: 75, high: 58, low: 80, color: '#10b981' }); // 小綠
-              } else if (matchedEncyclopedia.sentiment === 'bearish') {
-                // 偏空型態 (例如高檔十字星或吊人線)，代表之前是漲勢
-                contextCandles.push({ open: 80, close: 60, high: 55, low: 85, color: '#ef4444' }); // 長紅
-                contextCandles.push({ open: 58, close: 40, high: 35, low: 60, color: '#ef4444' }); // 長紅
-                contextCandles.push({ open: 38, close: 25, high: 20, low: 40, color: '#ef4444' }); // 小紅
-              } else {
-                // 盤整型態
-                contextCandles.push({ open: 50, close: 50, high: 30, low: 70, color: '#f59e0b' });
-              }
-              
-              // 將原本辨識出的那根單一 K 棒稍作位移接在後面
-              const mainCandle = pCandles[0];
-              const offset = matchedEncyclopedia.sentiment === 'bullish' ? 60 : (matchedEncyclopedia.sentiment === 'bearish' ? -20 : 0);
-              
-              // 為了確保不超出畫面，簡單限制一下
-              const safeY = (val) => Math.min(Math.max(val + offset, 10), 90);
-              
-              const adjustedMainCandle = {
-                open: safeY(mainCandle.open),
-                close: safeY(mainCandle.close),
-                high: safeY(mainCandle.high),
-                low: safeY(mainCandle.low),
-                color: mainCandle.color
-              };
-              
-              pCandles = [...contextCandles, adjustedMainCandle];
-            }
-
-            setCandles(pCandles);
-          }
-          alert(`✅ 已辨識出核心型態：【${matchedEncyclopedia.name}】\n(已為您自動補上合理的趨勢背景，供您在畫板繼續推演！)`);
-        } else {
-          alert(`⚠️ AI 回傳了型態「${topPattern.name || topPattern.patternId}」，但無法在系統百科中找到對應資料。`);
-        }
-      } else {
-        alert('無法辨識出明確的 K 線型態，請嘗試重新上傳。');
-      }
+      const result = await analyzeSimulatedCandles(candles, apiKey, selectedModel);
+      setAiReport(result);
     } catch (err) {
-      console.error('辨識失敗:', err);
-      alert(`⚠️ 分析失敗：${err.message}`);
+      console.error('AI 模擬推演失敗:', err);
+      alert(`⚠️ 推演失敗：${err.message}`);
     } finally {
-      setIsAnalyzing(false);
+      setIsAiAnalyzing(false);
     }
   };
 
-  // 監聽全域 Ctrl + V 剪貼簿貼上圖片
-  useEffect(() => {
-    const handlePaste = (e) => {
-      const items = e.clipboardData?.items;
-      if (!items) return;
-
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
-          const blob = items[i].getAsFile();
-          if (blob) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              processImage(event.target.result);
-            };
-            reader.readAsDataURL(blob);
-          }
-          break; // 只處理第一張
-        }
-      }
-    };
-
-    window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
-  }, [apiKey, selectedModel]); // 需要依賴 apiKey
-
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        processImage(event.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        processImage(event.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // 實時形態診斷演算法
-  const getDiagnosticInfo = () => {
+  // 內建即時快速診斷
+  const getQuickDiagnosis = () => {
     const len = candles.length;
-    if (len === 0) {
-      return {
-        name: '畫布空白，請點擊上方按鈕插入 K 棒',
-        winRate: '--',
-        sentiment: 'neutral',
-        summary: '您可以隨意組合單 K、雙 K 或多 K 形態，實時查看多空力量物理學反應。'
-      };
-    }
-
+    if (len === 0) return { name: '畫布空白，請插入 K 棒或點選下方 8 大劇本', winRate: '--', sentiment: 'neutral', summary: '自由組合 K 棒與量能，實時觀察多空力量反應。' };
+    
     const last = candles[len - 1];
     const prev = len >= 2 ? candles[len - 2] : null;
-    const prev2 = len >= 3 ? candles[len - 3] : null;
 
-    // 判斷最後一根是否為十字星
     if (Math.abs(last.open - last.close) <= 5) {
-      return {
-        name: '長十字星 (變盤猶豫訊號)',
-        winRate: '72%',
-        sentiment: 'neutral',
-        summary: '多空力量在此陷入僵局，上下引線拉鋸劇烈，通常代表原有走勢即將面臨方向大轉折。'
-      };
+      return { name: '長十字星 (變盤猶豫訊號)', winRate: '75%', sentiment: 'neutral', summary: '多空陷入僵局，若伴隨縮量代表洗盤待變，若爆量則代表高檔換手。' };
     }
-
-    // 判斷三 K 組合
-    if (len >= 3 && prev && prev2) {
-      // 連三紅 (紅三兵)
-      if (last.color === '#ef4444' && prev.color === '#ef4444' && prev2.color === '#ef4444') {
-        return {
-          name: '紅三兵 (強勢攻堅型態)',
-          winRate: '85%',
-          sentiment: 'bullish',
-          summary: '連續三日實體紅 K 步步高升，買盤力量源源不絕，主力發動波段主升段！'
-        };
-      }
-      // 連三黑 (三隻烏鴉)
-      if (last.color === '#10b981' && prev.color === '#10b981' && prev2.color === '#10b981') {
-        return {
-          name: '三隻烏鴉 (連續破底型態)',
-          winRate: '86%',
-          sentiment: 'bearish',
-          summary: '連續三日長黑殺跌破低，空方壓倒性主導，多頭應果斷停損出場。'
-        };
-      }
-      // 晨星 (綠 -> 星 -> 紅)
-      if (prev2.color === '#10b981' && last.color === '#ef4444') {
-        return {
-          name: '早晨之星 (破曉反轉型態)',
-          winRate: '86%',
-          sentiment: 'bullish',
-          summary: '殺跌後獲得支撐並以長紅拔起，經典底部三大形態之王！'
-        };
-      }
+    if (last.shadowType === '長上引線' || (last.open >= 40 && last.high <= 15)) {
+      return { name: '射擊之星 / 倒槌 (上方賣壓沉重)', winRate: '82%', sentiment: 'bearish', summary: '衝高後遭遇大戶無情摜壓，若伴隨爆量代表主力出貨。' };
     }
-
-    // 判斷雙 K 組合
-    if (len >= 2 && prev) {
-      // 陽包陰 (多頭吞噬)
-      if (prev.color === '#10b981' && last.color === '#ef4444' && last.open >= prev.close && last.close <= prev.open) {
-        return {
-          name: '多頭吞噬 (強烈止跌起漲)',
-          winRate: '84%',
-          sentiment: 'bullish',
-          summary: '今日長紅一口吞噬昨日長黑，多頭大軍全面吹響反攻號角！'
-        };
-      }
-      // 陰包陽 (空頭吞噬)
-      if (prev.color === '#ef4444' && last.color === '#10b981' && last.open <= prev.close && last.close >= prev.open) {
-        return {
-          name: '空頭吞噬 (高檔烏雲斷頭)',
-          winRate: '85%',
-          sentiment: 'bearish',
-          summary: '今日長黑完全吞沒昨日長紅，主力高檔無情倒貨，宜迅速停利逃命。'
-        };
-      }
+    if (last.shadowType === '長下引線' || (last.low >= 70 && last.close <= 40)) {
+      return { name: '探底槌子線 (低檔買盤承接)', winRate: '84%', sentiment: 'bullish', summary: '下殺過程中出現強勁低接買盤，有築底反彈契機。' };
     }
-
-    // 單 K 判斷
+    if (len >= 2 && prev && prev.color === '#10b981' && last.color === '#ef4444' && last.close <= prev.open) {
+      return { name: '多頭吞噬 (強烈止跌反攻)', winRate: '85%', sentiment: 'bullish', summary: '今日長紅一口吞噬昨日長黑，多軍發起強烈反攻！' };
+    }
+    if (len >= 2 && prev && prev.color === '#ef4444' && last.color === '#10b981' && last.close >= prev.open) {
+      return { name: '空頭吞噬 (烏雲罩頂倒貨)', winRate: '86%', sentiment: 'bearish', summary: '今日長黑直接破壞昨日長紅，空方重拳出擊。' };
+    }
     if (last.color === '#ef4444') {
-      return {
-        name: '大陽線 / 多方掌控攻擊',
-        winRate: '78%',
-        sentiment: 'bullish',
-        summary: '長紅實體飽滿，買方從頭到尾掌控盤面，氣勢強勁。'
-      };
-    } else {
-      return {
-        name: '大陰線 / 空方壓制整理',
-        winRate: '80%',
-        sentiment: 'bearish',
-        summary: '實體收黑，盤面遭遇獲利了結賣壓，向下尋求支撐防守。'
-      };
+      return { name: '大陽線 (多方攻擊掌控)', winRate: '78%', sentiment: 'bullish', summary: '實體飽滿，多方掌控盤面節奏。' };
     }
+    return { name: '大陰線 (空方壓制整理)', winRate: '80%', sentiment: 'bearish', summary: '實體收黑，盤面面臨獲利回吐賣壓。' };
   };
 
-  const diag = getDiagnosticInfo();
+  const quickDiag = getQuickDiagnosis();
 
   return (
     <div className="glass-panel" style={{ padding: '24px', margin: '20px 0' }}>
-      {/* 若有從百科載入形態，顯示演練提示條 */}
+      
+      {/* 頂部若有從百科載入形態 */}
       {loadedPattern && (
         <div style={{ background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.4)', borderRadius: '8px', padding: '10px 14px', marginBottom: '18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Sparkles size={18} color="#60a5fa" />
             <span style={{ fontSize: '0.88rem', color: '#f8fafc' }}>
               正在演練百科型態：<strong style={{ color: '#93c5fd' }}>【{loadedPattern.name}】</strong>
-              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginLeft: '8px' }}>
-                （位階：{loadedPattern.locationType || '實戰起漲'}，勝率 {loadedPattern.winRate}%）
-              </span>
             </span>
           </div>
           {onClearLoadedPattern && (
@@ -325,121 +240,280 @@ export default function InteractiveCanvas({ loadedPattern, onClearLoadedPattern,
               onClick={onClearLoadedPattern}
               style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
             >
-              <X size={14} /> 退出此型態演練
+              <X size={14} /> 退出此型態
             </button>
           )}
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+      {/* 標題與核心動作 */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <TrendingUp size={22} color="#3b82f6" />
-            <span>K 棒模擬測試畫板</span>
+            <span>K 棒模擬測試畫板 (實戰升級版)</span>
           </h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            自由組合排列 K 棒，實時驗證不同 K 棒組合所產生的多空力道與形態反應
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+            自由拼接 K 棒與量價關係，支援 8 大主力劇本快速載入與一鍵呼叫 Gemini AI 深度推演！
           </p>
         </div>
 
-        {/* 控制按鈕 */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button onClick={addBullCandle} className="btn-secondary" style={{ color: '#fca5a5', borderColor: 'rgba(239, 68, 68, 0.4)', fontSize: '0.85rem' }}>
-            <Plus size={15} /> 插入紅 K
+        {/* 核心 AI 推演按鈕 */}
+        <button
+          onClick={handleRunAiAnalysis}
+          disabled={candles.length === 0 || isAiAnalyzing}
+          className="btn-primary"
+          style={{
+            fontSize: '0.9rem',
+            padding: '10px 20px',
+            background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+            boxShadow: '0 4px 18px rgba(139, 92, 246, 0.4)'
+          }}
+        >
+          {isAiAnalyzing ? (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Cpu size={18} className="animate-spin-custom" /> AI 思考推演中...
+            </span>
+          ) : (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Bot size={18} /> 🤖 呼叫 AI 深度走勢推演
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* 【升級 1】8 大實戰劇本快捷切換列 */}
+      <div style={{ background: 'rgba(0,0,0,0.25)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', marginBottom: '16px' }}>
+        <div style={{ fontSize: '0.82rem', color: '#93c5fd', fontWeight: '700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Sparkles size={15} /> ⚡ 8 大經典主力作戰劇本（點擊秒切換演練）：
+        </div>
+        <div className="scrollable-tabs" style={{ gap: '8px', paddingBottom: '4px' }}>
+          {PRESET_SCENARIOS.map((sc) => (
+            <button
+              key={sc.id}
+              onClick={() => loadScenario(sc)}
+              className="btn-secondary"
+              style={{
+                fontSize: '0.8rem',
+                padding: '6px 12px',
+                flexShrink: 0,
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderColor: 'var(--border-subtle)',
+                color: '#e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <span>{sc.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 【升級 2】多功能 K 棒插入工具箱 */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginRight: '4px' }}>➕ 插入 K 棒：</span>
+          <button onClick={() => addCandle('bull')} className="btn-secondary" style={{ color: '#fca5a5', borderColor: 'rgba(239, 68, 68, 0.4)', fontSize: '0.82rem', padding: '6px 10px' }}>
+            🔴 長紅 K
           </button>
-          <button onClick={addBearCandle} className="btn-secondary" style={{ color: '#6ee7b7', borderColor: 'rgba(16, 185, 129, 0.4)', fontSize: '0.85rem' }}>
-            <Plus size={15} /> 插入綠 K
+          <button onClick={() => addCandle('bear')} className="btn-secondary" style={{ color: '#6ee7b7', borderColor: 'rgba(16, 185, 129, 0.4)', fontSize: '0.82rem', padding: '6px 10px' }}>
+            🟢 長黑 K
           </button>
-          <button onClick={addDoji} className="btn-secondary" style={{ color: '#fcd34d', borderColor: 'rgba(245, 158, 11, 0.4)', fontSize: '0.85rem' }}>
-            <Plus size={15} /> 插入十字星
+          <button onClick={() => addCandle('doji')} className="btn-secondary" style={{ color: '#fcd34d', borderColor: 'rgba(245, 158, 11, 0.4)', fontSize: '0.82rem', padding: '6px 10px' }}>
+            🟡 十字星
           </button>
+          <button onClick={() => addCandle('upper_shadow')} className="btn-secondary" style={{ color: '#fca5a5', borderColor: 'rgba(239, 68, 68, 0.3)', fontSize: '0.82rem', padding: '6px 10px' }}>
+            🔺 射擊之星(長上影)
+          </button>
+          <button onClick={() => addCandle('lower_shadow')} className="btn-secondary" style={{ color: '#6ee7b7', borderColor: 'rgba(16, 185, 129, 0.3)', fontSize: '0.82rem', padding: '6px 10px' }}>
+            🔻 探底神針(長下影)
+          </button>
+          <button onClick={() => addCandle('gap_up')} className="btn-secondary" style={{ color: '#60a5fa', borderColor: 'rgba(59, 130, 246, 0.4)', fontSize: '0.82rem', padding: '6px 10px' }}>
+            🚀 向上跳空
+          </button>
+          <button onClick={() => addCandle('gap_down')} className="btn-secondary" style={{ color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.4)', fontSize: '0.82rem', padding: '6px 10px' }}>
+            💥 向下跳空
+          </button>
+        </div>
+
+        {/* 畫布清空 / 撤銷 */}
+        <div style={{ display: 'flex', gap: '6px' }}>
           {candles.length > 0 && (
-            <button onClick={handleUndo} className="btn-secondary" style={{ fontSize: '0.85rem', color: '#cbd5e1' }} title="撤銷最後一根 K 棒">
-              撤銷
+            <button onClick={handleUndo} className="btn-secondary" style={{ fontSize: '0.8rem', padding: '6px 12px', color: '#cbd5e1' }}>
+              撤銷上一步
             </button>
           )}
-          <button onClick={handleReset} className="btn-secondary" style={{ fontSize: '0.85rem' }}>
-            <RotateCcw size={15} /> 範例重設
-          </button>
           {candles.length > 0 && (
-            <button onClick={handleClearAll} className="btn-secondary" style={{ fontSize: '0.85rem', color: '#f87171' }}>
-              <Trash2 size={15} /> 清空
+            <button onClick={handleClearAll} className="btn-secondary" style={{ fontSize: '0.8rem', padding: '6px 12px', color: '#f87171' }}>
+              <Trash2 size={14} /> 清空畫布
             </button>
           )}
         </div>
       </div>
 
-      {/* 畫板展示區 */}
+      {/* 【升級 3】K 線 + 成交量雙軌視覺展示畫板 */}
       <div 
         style={{ 
           background: 'rgba(0,0,0,0.5)', 
           borderRadius: '12px', 
-          border: isDragging ? '2px dashed #3b82f6' : '1px solid var(--border-subtle)', 
-          padding: '30px 20px', 
-          minHeight: '260px', 
+          border: '1px solid var(--border-subtle)', 
+          padding: '24px 20px', 
+          minHeight: '300px', 
           display: 'flex', 
+          flexDirection: 'column',
           alignItems: 'center', 
           justifyContent: 'center', 
-          overflowX: 'auto',
-          position: 'relative'
+          overflowX: 'auto'
         }}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
       >
-        {isAnalyzing ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: '#60a5fa' }}>
-            <div className="animate-spin-custom">
-              <Cpu size={32} />
-            </div>
-            <span style={{ fontSize: '0.9rem', fontWeight: '600' }}>正在辨識並轉換 K 線圖...</span>
-          </div>
-        ) : candles.length === 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', color: 'var(--text-muted)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px dashed rgba(255,255,255,0.1)' }}>
-              <ImageIcon size={24} />
-            </div>
-            <div style={{ textAlign: 'center', fontSize: '0.9rem' }}>
-              <p>畫布已清空，請點擊上方按鈕插入 K 棒開始模擬</p>
-              <p style={{ marginTop: '8px', fontSize: '0.85rem', color: '#94a3b8' }}>
-                或者 <strong style={{ color: '#60a5fa' }}>Ctrl + V 貼上截圖</strong> / 拖曳圖檔至此，自動辨識匯入！
-              </p>
-              <label style={{ display: 'inline-block', marginTop: '12px', padding: '6px 12px', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
-                選擇圖片上傳
-                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
-              </label>
-            </div>
+        {candles.length === 0 ? (
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+            <p>畫布已清空，請點擊上方按鈕插入 K 棒或點選 8 大劇本開始模擬</p>
           </div>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            {candles.map((candle, idx) => (
-              <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                <PatternSVG config={{ type: 'single', ...candle }} width={55} height={130} />
-                <span className="font-mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>T+{idx + 1}</span>
-              </div>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '18px', padding: '10px 0' }}>
+            {candles.map((candle, idx) => {
+              const isBull = candle.color === '#ef4444';
+              const volHeight = candle.volumeLevel === 'burst' ? 65 : candle.volumeLevel === 'dry' ? 15 : 35;
+              const volLabel = candle.volumeLevel === 'burst' ? '🔥 爆量' : candle.volumeLevel === 'dry' ? '💧 窒息' : '⚖️ 均量';
+              const volColor = candle.volumeLevel === 'burst' ? '#f59e0b' : isBull ? '#ef4444' : '#10b981';
+
+              return (
+                <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                  
+                  {/* K 棒本體 */}
+                  <PatternSVG config={{ type: 'single', ...candle }} width={55} height={125} />
+                  
+                  {/* 時間軸標籤 */}
+                  <span className="font-mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    T+{idx + 1}
+                  </span>
+
+                  {/* 成交量柱狀圖 (點擊可切換爆量/均量/窒息量) */}
+                  <div
+                    onClick={() => toggleVolume(idx)}
+                    style={{
+                      width: '42px',
+                      height: '75px',
+                      background: 'rgba(0,0,0,0.4)',
+                      borderRadius: '4px',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'flex-end',
+                      alignItems: 'center',
+                      padding: '2px',
+                      cursor: 'pointer',
+                      position: 'relative'
+                    }}
+                    title="點擊切換成交量 (爆量 / 均量 / 窒息量)"
+                  >
+                    <div
+                      style={{
+                        width: '100%',
+                        height: `${volHeight}px`,
+                        background: volColor,
+                        borderRadius: '2px',
+                        transition: 'all 0.2s ease'
+                      }}
+                    />
+                  </div>
+
+                  {/* 成交量標籤 */}
+                  <button
+                    onClick={() => toggleVolume(idx)}
+                    style={{
+                      fontSize: '0.68rem',
+                      padding: '2px 5px',
+                      borderRadius: '4px',
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid var(--border-subtle)',
+                      color: volColor,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {volLabel}
+                  </button>
+
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* 模擬診斷結果 */}
-      <div style={{ marginTop: '20px', padding: '16px', background: 'rgba(59, 130, 246, 0.08)', borderRadius: '10px', border: '1px solid rgba(59, 130, 246, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+      {/* 底部即時速覽列 */}
+      <div style={{ marginTop: '16px', padding: '14px 16px', background: 'rgba(59, 130, 246, 0.08)', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Info size={20} color="#60a5fa" />
+          <Info size={18} color="#60a5fa" />
           <div>
-            <div style={{ fontSize: '0.85rem', color: '#93c5fd', fontWeight: '600' }}>即時模擬組合判定：</div>
-            <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#ffffff' }}>
-              {diag.name}
-            </div>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-              {diag.summary}
-            </div>
+            <span style={{ fontSize: '0.82rem', color: '#93c5fd', fontWeight: '700' }}>即時幾何力道速判：</span>
+            <span style={{ fontSize: '0.95rem', fontWeight: '800', color: '#ffffff', marginLeft: '6px' }}>{quickDiag.name}</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginLeft: '10px' }}>{quickDiag.summary}</span>
           </div>
         </div>
-        <div style={{ fontSize: '0.85rem', color: '#f8fafc', background: 'rgba(0,0,0,0.3)', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
-          預估成真/反轉勝率：<strong style={{ color: diag.sentiment === 'bullish' ? '#ef4444' : diag.sentiment === 'bearish' ? '#10b981' : '#f59e0b' }}>{diag.winRate}</strong>
+        <div style={{ fontSize: '0.82rem', color: '#f8fafc', background: 'rgba(0,0,0,0.3)', padding: '4px 12px', borderRadius: '16px' }}>
+          歷史勝率：<strong style={{ color: quickDiag.sentiment === 'bullish' ? '#ef4444' : quickDiag.sentiment === 'bearish' ? '#10b981' : '#f59e0b' }}>{quickDiag.winRate}</strong>
         </div>
       </div>
+
+      {/* 【升級 4】Gemini AI 深度推演報告卡片 (當執行 AI 推演時展現) */}
+      {aiReport && (
+        <div className="glass-panel" style={{ marginTop: '20px', padding: '22px', border: '1px solid rgba(139, 92, 246, 0.4)', background: 'linear-gradient(135deg, rgba(30, 27, 75, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Bot size={22} color="#a855f7" />
+              <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#ffffff', margin: 0 }}>
+                Gemini AI 深度技術與量價推演報告
+              </h3>
+            </div>
+            <span style={{ fontSize: '0.8rem', padding: '4px 10px', borderRadius: '6px', background: 'rgba(168, 85, 247, 0.2)', color: '#d8b4fe', border: '1px solid rgba(168, 85, 247, 0.4)', fontWeight: '700' }}>
+              型態預估勝率：{aiReport.winRate || 80}%
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', alignItems: 'start' }}>
+            
+            {/* 主力心態分析 */}
+            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontSize: '0.85rem', color: '#60a5fa', fontWeight: '700', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Target size={15} /> 🧠 主力心態與量價博弈：
+              </div>
+              <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: '1.6', margin: 0 }}>
+                {aiReport.marketPsychology}
+              </p>
+            </div>
+
+            {/* 明日三套應對劇本 */}
+            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontSize: '0.85rem', color: '#fcd34d', fontWeight: '700', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <TrendingUp size={15} /> 🔮 明日推演劇本與觸發條件：
+              </div>
+              <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: '1.6', margin: 0, whiteSpace: 'pre-line' }}>
+                {aiReport.nextDayForecast}
+              </p>
+            </div>
+
+          </div>
+
+          {/* 操盤 SOP */}
+          {aiReport.tradingStrategy?.length > 0 && (
+            <div style={{ marginTop: '14px', padding: '12px 14px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
+              <div style={{ fontSize: '0.85rem', color: '#34d399', fontWeight: '700', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Shield size={15} /> 🛡️ 實戰操盤 SOP 與防守底線：
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.84rem', color: '#e2e8f0', lineHeight: '1.5' }}>
+                {aiReport.tradingStrategy.map((item, idx) => (
+                  <li key={idx}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
     </div>
   );
