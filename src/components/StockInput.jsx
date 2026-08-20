@@ -160,7 +160,7 @@ export default function StockInput({ onStockSubmit, isAnalyzing }) {
                   台股與期指連動涵蓋清單：
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <div>• 台指期貨 (夜盤/近月 TXF=F)</div>
+                  <div>• 台指期近一 (夜盤/近月 WTX&)</div>
                   <div>• 加權指數 (大盤 ^TWII)</div>
                   <div>• 櫃買指數 (OTC ^TWOII)</div>
                 </div>

@@ -166,9 +166,67 @@ export async function fetchStockData(stockCode, days = 90) {
 }
 
 /**
+ * 專門抓取台指期（夜盤/近月 WTX&）即時報價
+ */
+export async function fetchTaiwanFuturesQuote(displayName = '台指期近一 (夜盤/近月)') {
+  const targetUrl = 'https://tw.stock.yahoo.com/_td-stock/api/resource/StockServices.stockList;symbols=%5B%22WTX%26%22%5D';
+
+  for (const proxy of PROXIES) {
+    try {
+      const url = `${proxy}${encodeURIComponent(targetUrl)}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) continue;
+
+      const data = await response.json();
+      if (!Array.isArray(data) || data.length === 0) continue;
+
+      const item = data[0];
+      const rawPrice = item.price?.raw ?? item.price?.sort ?? item.price?.fmt;
+      const price = typeof rawPrice === 'string' ? parseFloat(rawPrice.replace(/,/g, '')) : Number(rawPrice);
+
+      const rawChange = item.change?.raw ?? item.change?.sort ?? item.change?.fmt;
+      const priceChange = typeof rawChange === 'string' ? parseFloat(rawChange.replace(/,/g, '')) : Number(rawChange);
+
+      let changePercent = 0;
+      if (item.changePercent) {
+        changePercent = parseFloat(String(item.changePercent).replace('%', ''));
+      } else if (item.regularMarketPreviousClose?.raw) {
+        const prev = parseFloat(item.regularMarketPreviousClose.raw);
+        changePercent = prev ? Number(((priceChange / prev) * 100).toFixed(2)) : 0;
+      }
+
+      if (!isNaN(price) && price > 0) {
+        return {
+          symbol: 'WTX&',
+          name: displayName || item.symbolName || '台指期近一 (夜盤/近月)',
+          price: Number(price.toFixed(2)),
+          priceChange: Number(priceChange.toFixed(2)),
+          changePercent: Number(changePercent.toFixed(2))
+        };
+      }
+    } catch (err) {
+      // 嘗試下一個代理
+    }
+  }
+
+  return null;
+}
+
+/**
  * 抓取單一標的最新報價簡要數據
  */
 export async function fetchSingleQuote(symbol, displayName = null) {
+  // 若為台指期相關代碼，導向專門之台指期即時報價函式
+  if (symbol === 'WTX&' || symbol === 'TXF=F' || symbol === 'WTX') {
+    const twFutures = await fetchTaiwanFuturesQuote(displayName);
+    if (twFutures) return twFutures;
+  }
+
   const range = '5d';
   const interval = '1d';
 
@@ -176,7 +234,12 @@ export async function fetchSingleQuote(symbol, displayName = null) {
     try {
       const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}`;
       const url = `${proxy}${encodeURIComponent(targetUrl)}`;
-      const response = await fetch(url);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
       if (!response.ok) continue;
 
       const data = await response.json();
@@ -222,7 +285,7 @@ export async function fetchMarketContextData({ includeFutures = true, includeUS 
   // 1. 台股期現貨優先抓取
   if (includeFutures) {
     const twSymbols = [
-      { symbol: 'TXF=F', name: '台指期貨 (夜盤/近月)' },
+      { symbol: 'WTX&', name: '台指期近一 (夜盤/近月)' },
       { symbol: '^TWII', name: '加權指數 (大盤)' },
       { symbol: '^TWOII', name: '櫃買指數 (OTC)' }
     ];
