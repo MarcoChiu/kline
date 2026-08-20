@@ -13,18 +13,6 @@ const DEFAULT_GEMINI_MODELS = GEMINI_MODEL_OPTIONS.map(({ value }) => value);
 const GEMINI_MODEL_CACHE_TTL = 5 * 60 * 1000;
 let geminiModelCache = null;
 
-import sampleYangMing from '../assets/sample_yangming.png';
-
-/**
- * 預設標準截圖範例列表
- */
-export const SAMPLE_CHARTS = [
-  {
-    id: sampleYangMing,
-    title: '陽明 (2609) 標準看盤截圖',
-    description: '包含頂部行情數值列、中間 K 線走勢與下方成交量之標準範例'
-  }
-];
 
 
 
@@ -38,6 +26,21 @@ export async function analyzeKlineImage(base64Image, apiKey = null, selectedMode
 
   console.log('正在呼叫 Google Gemini Vision API, 指定模型:', selectedModel, '型態數量:', patternCount);
   const geminiResult = await callGeminiVision(base64Image, apiKey.trim(), selectedModel, patternCount);
+  if (geminiResult) return geminiResult;
+
+  throw new Error('Gemini API 未回傳有效結果，請稍後再試');
+}
+
+/**
+ * 智能數據辨識入口 (純文本數據，無圖片)
+ */
+export async function analyzeKlineFromData(stockData, apiKey = null, selectedModel = 'auto', patternCount = 12) {
+  if (!apiKey || apiKey.trim().length < 10) {
+    throw new Error('請先設定 Gemini API Key 才能進行數據分析');
+  }
+
+  console.log('正在呼叫 Google Gemini Data API, 指定模型:', selectedModel, '型態數量:', patternCount);
+  const geminiResult = await callGeminiDataAnalysis(stockData, apiKey.trim(), selectedModel, patternCount);
   if (geminiResult) return geminiResult;
 
   throw new Error('Gemini API 未回傳有效結果，請稍後再試');
@@ -221,6 +224,172 @@ JSON 格式定義：
   throw lastError || new Error('所有 Gemini 模型均無法解析，請檢查 API Key 是否正確');
 }
 
+/**
+ * 呼叫 Google Gemini 進行純數據分析
+ */
+async function callGeminiDataAnalysis(stockData, apiKey, selectedModel = 'auto', patternCount = 12) {
+  let patternsToUse = KLINE_PATTERNS;
+  if (patternCount === 12) {
+    patternsToUse = KLINE_PATTERNS.filter(p => p.isTopFrequent);
+  }
+  const patternNamesList = patternsToUse.map(p => `- ${p.chineseName} (ID: ${p.id})`).join('\n');
+
+  const dataContext = `
+以下是股票代號 ${stockData.symbol} 近期的 OHLCV 歷史價格與均線資料 (JSON 格式):
+${JSON.stringify(stockData.historicalData, null, 2)}
+
+最新一日資料摘要:
+- 收盤價: ${stockData.latest.close}
+- 漲跌幅: ${stockData.latest.changePercent}%
+- MA5: ${stockData.latest.ma5}, MA10: ${stockData.latest.ma10}, MA20: ${stockData.latest.ma20}, MA60: ${stockData.latest.ma60}
+`;
+
+  const prompt = `你是一位「嚴謹客觀的量化技術與籌碼分析師 (Strict Quantitative Technical & Chip Analyst)」。
+你的唯一職責是透過上述提供的真實 OHLCV 歷史數據與均線資料，進行純粹基於數據、線型、價量與資金動向的客觀分析。
+
+核心原則：
+1. 絕對客觀，拒絕迎合：絕不為了討好而給出偏頗預測。如數據顯示籌碼鬆動或技術面弱勢，必須直言不諱地指出風險。
+2. 籌碼與技術互相印證：籌碼是推升股價的燃料，但價格行為是最終依歸。
+3. 無絕對預測：不使用「一定會」、「保證」等字眼。分析明日走勢時，必須提供多套劇本與觸發條件。
+4. 風險控管優先：在任何推論中明確點出「失效點(Invalidation Level)」，跌破或突破哪個價位代表推論失敗，應採取防守。
+
+【數據分析重點】
+1. **趨勢判定**：依據提供的 MA5, MA10, MA20, MA60，判斷目前是多頭排列、空頭排列還是糾結？價格是在 MA20/MA60 之上還是之下？乖離率是否過大？
+2. **K 線型態**：分析最近幾天的開高低收，比對以下 ${patternCount} 種系統支援的型態，挑選最符合目前走勢的型態（請精準對應 ID 與名稱）：
+${patternNamesList}
+3. **量能分析**：觀察近期的 volume (成交量)，是否有爆量長紅、爆量長黑、或量縮打底的現象？
+
+請嚴格執行以下工作流程：
+Step 1: 數據特徵提取 (價格、量能、最新 K 棒型態)
+Step 2: 均線與趨勢判定 (判斷多空排列與乖離)
+Step 3: 結構與趨勢共振評估 (標示壓力/支撐)
+Step 4: 明日走勢推演 (情境A偏多、情境B偏空、情境C盤整，各自的機率與條件)
+Step 5: 嚴格的操作結論與風險提示 (強制標註以均線或前低作為防守點)
+Step 6: 給新手的直白建議 (請根據多空勝率與型態真實評估)
+
+【輸出格式要求】
+請「嚴格以合法 JSON 格式」輸出，不可有 JSON 以外的文字。
+語氣必須冷靜、專業、克制。絕對禁用任何表情符號 (Emojis)。
+
+JSON 格式定義：
+{
+  "stockName": "請填寫該股票繁體中文名稱 (例如 2330 為 '台積電', 2609 為 '陽明', 8069 為 '元太')，若未知則填 '${stockData.stockName}'",
+  "stockCode": "${stockData.symbol}",
+  "openPrice": ${stockData.latest.open},
+  "highPrice": ${stockData.latest.high},
+  "lowPrice": ${stockData.latest.low},
+  "closePrice": ${stockData.latest.close},
+  "currentPrice": ${stockData.latest.close},
+  "priceChange": ${stockData.latest.priceChange},
+  "changePercent": ${stockData.latest.changePercent},
+  "latestDate": "${stockData.latest.date}",
+  "movingAverages": { "ma5": ${stockData.latest.ma5 || 0}, "ma10": ${stockData.latest.ma10 || 0}, "ma20": ${stockData.latest.ma20 || 0}, "ma60": ${stockData.latest.ma60 || 0} },
+  "volume": "${stockData.latest.volume} 股",
+  "detectedPatterns": [
+    {
+      "patternId": "從上述形態庫挑選對應的 ID (如 'big_bull')",
+      "name": "從上述形態庫挑選對應的中文名稱",
+      "confidence": 90,
+      "description": "Step 1 & 2: 詳細描述為何判定為此型態，並加入均線(MA)多空排列與乖離率判定"
+    }
+  ],
+  "prediction": {
+    "bullishProbability": 偏多機率(0-100),
+    "neutralProbability": 盤整機率(0-100),
+    "bearishProbability": 偏空機率(0-100),
+    "sentimentSummary": "Step 3: 一句話總結目前均線結構與共振預判",
+    "nextDayForecast": "Step 4: 明日走勢推演 (請使用換行符號 \\n 條列：\\n【情境 A (偏多)】: ...\\n【情境 B (偏空)】: ...\\n【情境 C (區間)】: ...)",
+    "supportLevels": [支撐1, 支撐2, 支撐3],
+    "resistanceLevels": [壓力1, 壓力2, 壓力3],
+    "orderBooking": {
+      "buyLimit": 建議低接掛單價(數值，例如 MA5 或第一道地板價),
+      "buyNote": "低接理由 (例如: '回測 MA5 均線逢低掛單低接')",
+      "takeProfitLimit": 建議停利掛單價(數值，例如第一道天花板壓力價),
+      "takeProfitNote": "停利理由 (例如: '衝高挑戰前高天花板分批獲利了結')",
+      "stopLossLimit": 建議停損防守價(數值，例如跌破 MA20 或關鍵地板),
+      "stopLossNote": "停損理由 (例如: '跌破 MA20 月線無條件出場')"
+    },
+    "tradingStrategy": [
+      "精簡操作結論 (一句話)",
+      "防守點提示 (明確點出跌破哪個價位停損)"
+    ],
+    "actionDecision": "Step 6-1: 懶人包結論。強制從這三個詞中選一個輸出：【買進】、【觀望】、【賣出】。絕對不可輸出其他文字。",
+    "beginnerAdvice": "Step 6-2: 針對新手給出極簡潔明確的操作指引（包含【空手者】與【持有者】各一句話）。",
+    "riskLevel": "極高 / 高 / 中 / 低風險"
+  }
+}
+
+${dataContext}
+`;
+
+  let availableModels = [];
+  try {
+    availableModels = await fetchAvailableGeminiModels(apiKey);
+  } catch (err) {
+    console.warn('無法取得 Gemini 模型清單，改用內建備援清單:', err.message);
+  }
+
+  const modelsToTry = getGeminiModelCandidates(selectedModel, availableModels);
+  let lastError = null;
+
+  for (const model of modelsToTry) {
+    try {
+      const response = await requestGeminiModel(model, apiKey, prompt, null, null);
+      if (!response.ok) {
+        const errorJson = await response.json().catch(() => ({}));
+        const msg = errorJson.error?.message || response.statusText;
+        lastError = new Error(`[${model}] ${msg}`);
+        continue;
+      }
+
+      const data = await response.json();
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) {
+        lastError = new Error(`[${model}] 未回傳任何文字`);
+        continue;
+      }
+
+      let parsed;
+      try {
+        parsed = parseGeminiJson(rawText);
+      } catch (err) {
+        console.error('Gemini 輸出無法解析為 JSON:', rawText);
+        lastError = new Error(`[${model}] 無法從回應中擷取 JSON 結構`);
+        continue;
+      }
+
+      return {
+        ...parsed,
+        stockName: parsed.stockName || stockData.stockName,
+        stockCode: stockData.symbol,
+        openPrice: stockData.latest.open,
+        highPrice: stockData.latest.high,
+        lowPrice: stockData.latest.low,
+        closePrice: stockData.latest.close,
+        currentPrice: stockData.latest.close,
+        priceChange: stockData.latest.priceChange,
+        changePercent: stockData.latest.changePercent,
+        latestDate: stockData.latest.date,
+        movingAverages: {
+          ma5: stockData.latest.ma5,
+          ma10: stockData.latest.ma10,
+          ma20: stockData.latest.ma20,
+          ma60: stockData.latest.ma60
+        },
+        volume: stockData.latest.formattedVolume || parsed.volume || `${stockData.latest.volume} 股`,
+        meta: stockData.meta,
+        isGeminiVision: false,
+        usedModel: model,
+        analyzedAt: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      };
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error('所有 Gemini 模型均無法解析，請檢查 API Key 是否正確');
+}
+
 export async function fetchAvailableGeminiModels(apiKey) {
   const normalizedKey = apiKey.trim();
   const now = Date.now();
@@ -286,18 +455,18 @@ async function requestGeminiModel(model, apiKey, prompt, mimeType, cleanBase64) 
     ...(isThinkingModel ? {} : { responseMimeType: 'application/json' })
   };
 
+  const parts = [{ text: prompt }];
+  if (mimeType && cleanBase64) {
+    parts.push({
+      inlineData: {
+        mimeType,
+        data: cleanBase64
+      }
+    });
+  }
+
   const body = JSON.stringify({
-    contents: [{
-      parts: [
-        { text: prompt },
-        {
-          inlineData: {
-            mimeType,
-            data: cleanBase64
-          }
-        }
-      ]
-    }],
+    contents: [{ parts }],
     generationConfig
   });
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
@@ -307,7 +476,7 @@ async function requestGeminiModel(model, apiKey, prompt, mimeType, cleanBase64) 
     try {
       const response = await fetchWithTimeout(url, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'x-goog-api-key': apiKey
         },

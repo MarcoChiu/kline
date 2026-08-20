@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Play, Plus, RotateCcw, Trash2, TrendingUp, Info, Sparkles, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Play, Plus, RotateCcw, Trash2, TrendingUp, Info, Sparkles, X, UploadCloud, Cpu, Image as ImageIcon } from 'lucide-react';
 import { PatternSVG } from './PatternEncyclopedia';
-import { getPatternSimulatorCandles } from '../data/klinePatterns';
+import { getPatternSimulatorCandles, KLINE_PATTERNS } from '../data/klinePatterns';
+import { analyzeKlineImage } from '../services/aiVisionService';
 
-export default function InteractiveCanvas({ loadedPattern, onClearLoadedPattern }) {
+export default function InteractiveCanvas({ loadedPattern, onClearLoadedPattern, apiKey, selectedModel, onOpenApiKeyModal }) {
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [candles, setCandles] = useState([
     { open: 70, close: 35, high: 28, low: 75, color: '#ef4444' }, // 紅 K
     { open: 36, close: 50, high: 32, low: 55, color: '#10b981' }, // 小綠 K
@@ -56,6 +59,152 @@ export default function InteractiveCanvas({ loadedPattern, onClearLoadedPattern 
       { open: 50, close: 62, high: 45, low: 68, color: '#10b981' },
       { open: 60, close: 20, high: 15, low: 65, color: '#ef4444' }
     ]);
+  };
+
+  // 處理圖片分析並載入
+  const processImage = async (imageSource) => {
+    if (!apiKey || apiKey.trim().length < 10) {
+      if (onOpenApiKeyModal) onOpenApiKeyModal();
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      let base64Data = imageSource;
+      if (imageSource && !imageSource.startsWith('data:')) {
+        const res = await fetch(imageSource);
+        const blob = await res.blob();
+        base64Data = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      const result = await analyzeKlineImage(base64Data, apiKey, selectedModel || 'gemini-2.5-flash', 12);
+      
+      if (result && result.detectedPatterns && result.detectedPatterns.length > 0) {
+        const topPattern = result.detectedPatterns[0];
+        let matchedEncyclopedia = KLINE_PATTERNS.find(p => 
+          p.id === topPattern.patternId || 
+          (topPattern.name && p.name && topPattern.name.toLowerCase().includes(p.name.toLowerCase())) || 
+          (topPattern.name && p.chineseName && topPattern.name.includes(p.chineseName))
+        );
+
+        if (matchedEncyclopedia) {
+          let pCandles = getPatternSimulatorCandles(matchedEncyclopedia);
+          if (pCandles.length > 0) {
+            
+            // 智能情境還原 (Smart Context Generation)
+            // 如果辨識出的是單一 K 棒 (例如十字星)，為它加上前置的趨勢背景，看起來才像真實走勢！
+            if (matchedEncyclopedia.category === 'single' || pCandles.length === 1) {
+              const contextCandles = [];
+              if (matchedEncyclopedia.sentiment === 'bullish') {
+                // 偏多型態 (例如底部十字星或槌子線)，代表之前是跌勢
+                contextCandles.push({ open: 20, close: 40, high: 15, low: 45, color: '#10b981' }); // 長綠
+                contextCandles.push({ open: 42, close: 60, high: 38, low: 65, color: '#10b981' }); // 長綠
+                contextCandles.push({ open: 62, close: 75, high: 58, low: 80, color: '#10b981' }); // 小綠
+              } else if (matchedEncyclopedia.sentiment === 'bearish') {
+                // 偏空型態 (例如高檔十字星或吊人線)，代表之前是漲勢
+                contextCandles.push({ open: 80, close: 60, high: 55, low: 85, color: '#ef4444' }); // 長紅
+                contextCandles.push({ open: 58, close: 40, high: 35, low: 60, color: '#ef4444' }); // 長紅
+                contextCandles.push({ open: 38, close: 25, high: 20, low: 40, color: '#ef4444' }); // 小紅
+              } else {
+                // 盤整型態
+                contextCandles.push({ open: 50, close: 50, high: 30, low: 70, color: '#f59e0b' });
+              }
+              
+              // 將原本辨識出的那根單一 K 棒稍作位移接在後面
+              const mainCandle = pCandles[0];
+              const offset = matchedEncyclopedia.sentiment === 'bullish' ? 60 : (matchedEncyclopedia.sentiment === 'bearish' ? -20 : 0);
+              
+              // 為了確保不超出畫面，簡單限制一下
+              const safeY = (val) => Math.min(Math.max(val + offset, 10), 90);
+              
+              const adjustedMainCandle = {
+                open: safeY(mainCandle.open),
+                close: safeY(mainCandle.close),
+                high: safeY(mainCandle.high),
+                low: safeY(mainCandle.low),
+                color: mainCandle.color
+              };
+              
+              pCandles = [...contextCandles, adjustedMainCandle];
+            }
+
+            setCandles(pCandles);
+          }
+          alert(`✅ 已辨識出核心型態：【${matchedEncyclopedia.name}】\n(已為您自動補上合理的趨勢背景，供您在畫板繼續推演！)`);
+        } else {
+          alert(`⚠️ AI 回傳了型態「${topPattern.name || topPattern.patternId}」，但無法在系統百科中找到對應資料。`);
+        }
+      } else {
+        alert('無法辨識出明確的 K 線型態，請嘗試重新上傳。');
+      }
+    } catch (err) {
+      console.error('辨識失敗:', err);
+      alert(`⚠️ 分析失敗：${err.message}`);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // 監聽全域 Ctrl + V 剪貼簿貼上圖片
+  useEffect(() => {
+    const handlePaste = (e) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const blob = items[i].getAsFile();
+          if (blob) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              processImage(event.target.result);
+            };
+            reader.readAsDataURL(blob);
+          }
+          break; // 只處理第一張
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [apiKey, selectedModel]); // 需要依賴 apiKey
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        processImage(event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        processImage(event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   // 實時形態診斷演算法
@@ -221,9 +370,46 @@ export default function InteractiveCanvas({ loadedPattern, onClearLoadedPattern 
       </div>
 
       {/* 畫板展示區 */}
-      <div style={{ background: 'rgba(0,0,0,0.5)', borderRadius: '12px', border: '1px solid var(--border-subtle)', padding: '30px 20px', minHeight: '260px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflowX: 'auto' }}>
-        {candles.length === 0 ? (
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>畫布已清空，請點擊上方按鈕插入 K 棒開始模擬</div>
+      <div 
+        style={{ 
+          background: 'rgba(0,0,0,0.5)', 
+          borderRadius: '12px', 
+          border: isDragging ? '2px dashed #3b82f6' : '1px solid var(--border-subtle)', 
+          padding: '30px 20px', 
+          minHeight: '260px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          overflowX: 'auto',
+          position: 'relative'
+        }}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {isAnalyzing ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: '#60a5fa' }}>
+            <div className="animate-spin-custom">
+              <Cpu size={32} />
+            </div>
+            <span style={{ fontSize: '0.9rem', fontWeight: '600' }}>正在辨識並轉換 K 線圖...</span>
+          </div>
+        ) : candles.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px dashed rgba(255,255,255,0.1)' }}>
+              <ImageIcon size={24} />
+            </div>
+            <div style={{ textAlign: 'center', fontSize: '0.9rem' }}>
+              <p>畫布已清空，請點擊上方按鈕插入 K 棒開始模擬</p>
+              <p style={{ marginTop: '8px', fontSize: '0.85rem', color: '#94a3b8' }}>
+                或者 <strong style={{ color: '#60a5fa' }}>Ctrl + V 貼上截圖</strong> / 拖曳圖檔至此，自動辨識匯入！
+              </p>
+              <label style={{ display: 'inline-block', marginTop: '12px', padding: '6px 12px', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                選擇圖片上傳
+                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
+              </label>
+            </div>
+          </div>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             {candles.map((candle, idx) => (

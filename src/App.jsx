@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
-import ImageUploader from './components/ImageUploader';
+import StockInput from './components/StockInput';
 import AnalysisResult from './components/AnalysisResult';
 import PatternEncyclopedia from './components/PatternEncyclopedia';
 import InteractiveCanvas from './components/InteractiveCanvas';
 import ApiKeyModal from './components/ApiKeyModal';
-import { analyzeKlineImage, SAMPLE_CHARTS } from './services/aiVisionService';
+import { analyzeKlineFromData } from './services/aiVisionService';
+import { fetchStockData } from './services/yahooFinanceService';
 import confetti from 'canvas-confetti';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('analyzer'); // 'analyzer' | 'encyclopedia' | 'simulator'
-  const [selectedImage, setSelectedImage] = useState(null);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [apiKey, setApiKey] = useState('');
@@ -57,34 +57,24 @@ export default function App() {
     setActiveTab('simulator');
   };
 
-  // 選擇圖片並開始分析 (需要 Gemini API Key)
-  const handleImageSelected = async (imageSource, title) => {
-    // 沒有 API Key 時，直接彈出設定面板
+  // 選擇股號並自動獲取數據分析
+  const handleStockSubmit = async (stockCode) => {
     if (!apiKey || apiKey.trim().length < 10) {
-      setSelectedImage(imageSource || null);
       setActiveTab('analyzer');
       setIsApiKeyModalOpen(true);
       return;
     }
 
-    setSelectedImage(imageSource || null);
     setIsAnalyzing(true);
     setAnalysisResult(null);
     setActiveTab('analyzer');
 
     try {
-      let base64Data = imageSource;
-      if (imageSource && !imageSource.startsWith('data:')) {
-        const res = await fetch(imageSource);
-        const blob = await res.blob();
-        base64Data = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.readAsDataURL(blob);
-        });
-      }
-
-      const result = await analyzeKlineImage(base64Data, apiKey, selectedModel, patternCount);
+      // 1. 從 API 抓取歷史 K 線資料
+      const stockData = await fetchStockData(stockCode);
+      
+      // 2. 傳遞結構化資料給 Gemini 進行精確文字分析
+      const result = await analyzeKlineFromData(stockData, apiKey, selectedModel, patternCount);
       setAnalysisResult(result);
 
       confetti({
@@ -94,12 +84,14 @@ export default function App() {
         colors: ['#3b82f6', '#10b981', '#ef4444']
       });
     } catch (err) {
-      console.error('辨識失敗:', err);
-      alert(`⚠️ 分析失敗：${err.message}`);
+      console.error('抓取或分析失敗:', err);
+      alert(`⚠️ 處理失敗：${err.message}`);
     } finally {
       setIsAnalyzing(false);
     }
   };
+
+  // (已移除圖片辨識功能，專注於即時資料抓取)
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '0 16px 40px' }}>
@@ -117,10 +109,9 @@ export default function App() {
         
         {activeTab === 'analyzer' && (
           <div>
-            <ImageUploader
-              onImageSelected={handleImageSelected}
+            <StockInput
+              onStockSubmit={handleStockSubmit}
               isAnalyzing={isAnalyzing}
-              selectedImage={selectedImage}
             />
 
             <AnalysisResult
@@ -143,6 +134,9 @@ export default function App() {
           <InteractiveCanvas
             loadedPattern={loadedSimulatorPattern}
             onClearLoadedPattern={() => setLoadedSimulatorPattern(null)}
+            apiKey={apiKey}
+            selectedModel={selectedModel}
+            onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
           />
         )}
 

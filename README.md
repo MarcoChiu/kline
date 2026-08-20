@@ -8,10 +8,10 @@
 
 ## 🌟 核心特色
 
-1. **⚡ Google Gemini Flash 多模態視覺模型**
-   - 優先使用 `Gemini 2.5 Flash`，並支援 `Gemini 2.5 Flash-Lite` 與 API Key 實際可用的 Flash 模型自動備援。
+1. **⚡ Google Gemini Flash 大模型 + 即時資料抓取**
+   - 優先使用 `Gemini 2.5 Flash`，並支援 `Gemini 2.5 Flash-Lite` 與自訂模型切換。
    - 免費層的模型、速率與每日配額依 Google AI Studio 帳號、地區與最新政策為準。
-   - 秒速讀取看盤截圖中的股票名稱、代碼、開高低收價格、均線系統與成交量。
+   - 輸入台股代碼（支援上市 `.TW` 與上櫃 `.TWO`）自動抓取近期 OHLCV 歷史行情與 MA 均線，徹底避免視覺辨識誤差。
 
 2. **📖 完整 52 種經典 K 棒型態百科圖鑑**
    - 收錄《錢線百分百》48 種戰法中的內困三日翻紅／翻黑，並補充其他經典單 K、雙 K 與多 K 型態。
@@ -59,19 +59,19 @@ kline/
 ├── .agents/
 │   └── AGENTS.md             # AI 助理角色設定與行為規範
 ├── public/
-│   └── sample_yangming.png   # 預設看盤範例圖 (陽明 2609)
 ├── src/
 │   ├── components/
 │   │   ├── AnalysisResult.jsx       # 核心分析報告面板、天花板/地板、百科彈出視窗
 │   │   ├── ApiKeyModal.jsx          # Gemini API Key 配置與模型自訂下拉選單
 │   │   ├── Header.jsx               # 頂部導航與 Build Time 標籤
-│   │   ├── ImageUploader.jsx        # 圖片拖曳、貼上、上傳與範例載入
 │   │   ├── InteractiveCanvas.jsx    # 互動式 K 線模擬器 (畫板)
-│   │   └── PatternEncyclopedia.jsx  # 52 種 K 線型態百科與 SVG 向量渲染
+│   │   ├── PatternEncyclopedia.jsx  # 52 種 K 線型態百科與 SVG 向量渲染
+│   │   └── StockInput.jsx           # 股號輸入與即時資料自動分析面板
 │   ├── data/
 │   │   └── klinePatterns.js         # 52 種 K 棒型態戰法完整資料庫
 │   ├── services/
-│   │   └── aiVisionService.js       # Gemini Flash 雲端 API 解析引擎
+│   │   ├── aiVisionService.js       # Gemini 雲端 API 量化與型態分析引擎
+│   │   └── yahooFinanceService.js   # 歷史 K 線與均線資料抓取服務
 │   ├── styles/
 │   │   └── index.css                # 玻璃擬態樣式與行動端響應式 CSS
 │   ├── App.jsx                      # 主應用程式入口

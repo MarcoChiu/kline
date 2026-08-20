@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, Minus, Target, ShieldAlert, Cpu, Award, Zap, Compass, X, Shield, Globe, ExternalLink } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Target, ShieldAlert, Cpu, Award, Zap, Compass, X, Shield, Globe, ExternalLink, Calendar, CheckCircle2, BookmarkCheck } from 'lucide-react';
 import { KLINE_PATTERNS } from '../data/klinePatterns';
 import { PatternSVG } from './PatternEncyclopedia';
 
@@ -29,10 +29,10 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
           </div>
         </div>
         <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#f8fafc', marginBottom: '8px' }}>
-          AI 視覺模型與形態神經網絡正在解析 K 線圖...
+          AI 量化模型正在解析 K 線歷史數據...
         </h3>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '500px', margin: '0 auto' }}>
-          正在辨識頂部文字（股名、代碼、開高低收）、計算 MA 均線排列、掃描 K 棒組合特徵並推演明日走勢...
+          正在計算 MA 均線多空排列、掃描 K 棒組合型態並推演明日多空機率與防守點...
         </p>
       </div>
     );
@@ -163,308 +163,245 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
           )}
 
         </div>
-      </div>
 
-      {/* 2. 核心分析區：先百科形態，再明日走勢推演 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-        
-        {/* 左側：對應百科 K 線形態 (優先閱讀) */}
-        <div className="glass-panel" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Award size={18} color="#8b5cf6" />
-              <span>對應百科 K 線形態</span>
-            </h3>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              共鎖定 {detectedPatterns?.length || 0} 個顯著特徵
-            </span>
+        {/* 2. 即時 OHLCV 行情數據明細列 (大字體清晰版) */}
+        <div className="ohlc-grid" style={{ marginTop: '18px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '12px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: '600', marginBottom: '4px' }}>開盤價 (Open)</div>
+            <div className="font-mono" style={{ fontSize: '1.35rem', fontWeight: '800', color: '#f8fafc' }}>
+              {result.openPrice ?? '--'}
+            </div>
           </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {detectedPatterns?.map((item, idx) => {
-              let matchedEncyclopedia = KLINE_PATTERNS.find(p => 
-                p.id === item.patternId || 
-                item.name?.toLowerCase().includes(p.name.toLowerCase()) || 
-                item.name?.includes(p.chineseName) ||
-                (item.description && (item.description.includes(p.name.split(' ')[0]) || item.description.includes(p.chineseName.split(' ')[0])))
-              );
-
-
-              return (
-                <div key={idx} className="glass-card" style={{ padding: '14px', borderLeft: '4px solid #8b5cf6' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <span style={{ fontWeight: '800', fontSize: '1rem', color: '#f8fafc' }}>
-                      {matchedEncyclopedia ? matchedEncyclopedia.name : item.name}
-                    </span>
-                    <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', background: 'rgba(139, 92, 246, 0.2)', color: '#c4b5fd', fontWeight: '600' }}>
-                      形態符合度 {item.confidence}%
-                    </span>
-                  </div>
-                  
-                  <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '6px' }}>
-                    {item.description}
-                  </p>
-
-                  {matchedEncyclopedia && (
-                    <div style={{ background: 'rgba(0,0,0,0.25)', padding: '8px 10px', borderRadius: '6px', margin: '6px 0', fontSize: '0.82rem', color: '#cbd5e1', lineHeight: '1.5' }}>
-                      <div><strong style={{ color: '#60a5fa' }}>💡 百科白話解讀：</strong>{matchedEncyclopedia.summary}</div>
-                      <div style={{ marginTop: '3px' }}><strong style={{ color: '#f59e0b' }}>⚡ 主力想法：</strong>{matchedEncyclopedia.marketPsychology}</div>
-                    </div>
-                  )}
-
-                  {matchedEncyclopedia && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveModalPattern(matchedEncyclopedia)}
-                      style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: '0.82rem', cursor: 'pointer', marginTop: '6px', padding: 0, textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      點擊查看【{matchedEncyclopedia.name.split(' ')[0]}】完整白話操盤守則 (彈出視窗) →
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+          <div style={{ background: 'rgba(239, 68, 68, 0.08)', padding: '12px 14px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.25)' }}>
+            <div style={{ fontSize: '0.85rem', color: '#fca5a5', fontWeight: '600', marginBottom: '4px' }}>最高價 (High)</div>
+            <div className="font-mono" style={{ fontSize: '1.35rem', fontWeight: '800', color: '#f87171' }}>
+              {result.highPrice ?? '--'}
+            </div>
+          </div>
+          <div style={{ background: 'rgba(16, 185, 129, 0.08)', padding: '12px 14px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
+            <div style={{ fontSize: '0.85rem', color: '#6ee7b7', fontWeight: '600', marginBottom: '4px' }}>最低價 (Low)</div>
+            <div className="font-mono" style={{ fontSize: '1.35rem', fontWeight: '800', color: '#34d399' }}>
+              {result.lowPrice ?? '--'}
+            </div>
+          </div>
+          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '12px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: '600', marginBottom: '4px' }}>收盤價 (Close)</div>
+            <div className="font-mono" style={{ fontSize: '1.35rem', fontWeight: '800', color: isDown ? '#34d399' : (isFlat ? '#f8fafc' : '#f87171') }}>
+              {result.closePrice ?? displayPrice}
+            </div>
+          </div>
+          <div style={{ background: 'rgba(245, 158, 11, 0.08)', padding: '12px 14px', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.25)' }}>
+            <div style={{ fontSize: '0.85rem', color: '#fde68a', fontWeight: '600', marginBottom: '4px' }}>總成交量 (Volume)</div>
+            <div className="font-mono" style={{ fontSize: '1.15rem', fontWeight: '800', color: '#fbbf24' }}>
+              {result.volume || '--'}
+            </div>
+          </div>
+          <div style={{ background: 'rgba(59, 130, 246, 0.08)', padding: '12px 14px', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.25)' }}>
+            <div style={{ fontSize: '0.85rem', color: '#93c5fd', fontWeight: '600', marginBottom: '4px' }}>資料日期 (Date)</div>
+            <div className="font-mono" style={{ fontSize: '1.15rem', fontWeight: '800', color: '#60a5fa' }}>
+              {latestDate || result.latestDate || '--'}
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* 右側：明日勝率雷達與情境推演 */}
-        <div className="glass-panel" style={{ padding: '24px' }}>
+      {/* 2. 【核心重點】明日盤前/早鳥預約掛單建議 (Order Booking Matrix) */}
+      <div className="glass-panel" style={{ padding: '22px', border: '1px solid rgba(59, 130, 246, 0.4)', background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#60a5fa' }}>
+              <BookmarkCheck size={20} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#f8fafc', margin: 0 }}>
+                明日早鳥預約掛單建議
+              </h3>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+                盤後 14:00 ~ 隔日 08:30 可預先於券商 App 掛上條件單／限價單
+              </p>
+            </div>
+          </div>
+
+          {/* 結論標籤 */}
+          {prediction.actionDecision && (
+            <div style={{
+              padding: '6px 16px',
+              borderRadius: '8px',
+              fontWeight: '900',
+              fontSize: '1.1rem',
+              color: '#fff',
+              background: prediction.actionDecision.includes('買') ? '#10b981' : prediction.actionDecision.includes('賣') ? '#ef4444' : '#f59e0b',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              <span>綜合策略：</span>
+              <span>{prediction.actionDecision}</span>
+            </div>
+          )}
+        </div>
+
+        {/* 預約單三價位矩陣 */}
+        {(() => {
+          const booking = prediction.orderBooking || {};
+          const buyPrice = booking.buyLimit || prediction.supportLevels?.[0] || movingAverages?.ma5 || (displayPrice ? (displayPrice * 0.985).toFixed(2) : '--');
+          const takeProfitPrice = booking.takeProfitLimit || prediction.resistanceLevels?.[0] || (displayPrice ? (displayPrice * 1.035).toFixed(2) : '--');
+          const stopLossPrice = booking.stopLossLimit || prediction.supportLevels?.[1] || movingAverages?.ma20 || (displayPrice ? (displayPrice * 0.95).toFixed(2) : '--');
+
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '14px', alignItems: 'start' }}>
+              
+              {/* 1. 逢低掛單買進價 */}
+              <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '10px', padding: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#6ee7b7', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <TrendingUp size={16} /> 🟢 逢低買進掛單價
+                  </span>
+                  <span style={{ fontSize: '0.72rem', background: 'rgba(16, 185, 129, 0.2)', color: '#a7f3d0', padding: '2px 6px', borderRadius: '4px' }}>
+                    支撐承接
+                  </span>
+                </div>
+                <div className="font-mono" style={{ fontSize: '1.7rem', fontWeight: '800', color: '#34d399', marginBottom: '4px' }}>
+                  {buyPrice} <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>元</span>
+                </div>
+                <p style={{ fontSize: '0.8rem', color: '#cbd5e1', margin: 0, lineHeight: '1.4' }}>
+                  {booking.buyNote || '拉回第一道地板或 MA5 均線時逢低分批低接'}
+                </p>
+              </div>
+
+              {/* 2. 逢高掛單停利價 */}
+              <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '10px', padding: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#fca5a5', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Target size={16} /> 🔴 逢高停利掛單價
+                  </span>
+                  <span style={{ fontSize: '0.72rem', background: 'rgba(239, 68, 68, 0.2)', color: '#fecaca', padding: '2px 6px', borderRadius: '4px' }}>
+                    天花板壓力
+                  </span>
+                </div>
+                <div className="font-mono" style={{ fontSize: '1.7rem', fontWeight: '800', color: '#f87171', marginBottom: '4px' }}>
+                  {takeProfitPrice} <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>元</span>
+                </div>
+                <p style={{ fontSize: '0.8rem', color: '#cbd5e1', margin: 0, lineHeight: '1.4' }}>
+                  {booking.takeProfitNote || '衝高遇第一道天花板或前波高點分批停利入袋'}
+                </p>
+              </div>
+
+              {/* 3. 嚴格防守停損價 */}
+              <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '10px', padding: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#fcd34d', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <ShieldAlert size={16} /> 🛡️ 破線停損出場價
+                  </span>
+                  <span style={{ fontSize: '0.72rem', background: 'rgba(245, 158, 11, 0.2)', color: '#fef3c7', padding: '2px 6px', borderRadius: '4px' }}>
+                    最後防線
+                  </span>
+                </div>
+                <div className="font-mono" style={{ fontSize: '1.7rem', fontWeight: '800', color: '#fbbf24', marginBottom: '4px' }}>
+                  {stopLossPrice} <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>元</span>
+                </div>
+                <p style={{ fontSize: '0.8rem', color: '#cbd5e1', margin: 0, lineHeight: '1.4' }}>
+                  {booking.stopLossNote || '跌破 MA20 月線或關鍵地板需無條件保命出場'}
+                </p>
+              </div>
+
+            </div>
+          );
+        })()}
+
+        {/* 簡潔直白白話指引 */}
+        {prediction.beginnerAdvice && (
+          <div style={{ background: 'rgba(0,0,0,0.25)', padding: '12px 14px', borderRadius: '8px', fontSize: '0.88rem', color: '#e2e8f0', lineHeight: '1.5' }}>
+            <strong style={{ color: '#60a5fa' }}>💡 操作守則速覽：</strong>{prediction.beginnerAdvice}
+          </div>
+        )}
+      </div>
+
+      {/* 3. 明日走勢推演 & 關鍵天花板與地板階梯 */}
+      <div className="responsive-grid-2">
+        
+        {/* 左側：明日勝率雷達與走勢推演 */}
+        <div className="glass-panel" style={{ padding: '22px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Compass size={18} color="#06b6d4" />
-              <span>明日走勢概率推演</span>
+              <span>明日多空概率 & 情境推演</span>
             </h3>
             <span style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '4px', background: 'rgba(6, 182, 212, 0.1)', color: '#06b6d4', border: '1px solid rgba(6, 182, 212, 0.3)' }}>
               AI 綜合評估
             </span>
           </div>
 
-          {/* 🌐 夜盤與美股期指跨市場共振觀測列 */}
-          <div style={{ background: 'rgba(0,0,0,0.35)', borderRadius: '10px', padding: '12px', border: '1px solid rgba(59, 130, 246, 0.25)', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
-              <div style={{ fontSize: '0.82rem', fontWeight: '700', color: '#93c5fd', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Globe size={15} color="#60a5fa" />
-                <span>夜盤與美股連動因子：</span>
+          {/* 勝率進度條 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                <span style={{ color: '#fca5a5', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <TrendingUp size={14} /> 偏多上漲
+                </span>
+                <span className="font-mono" style={{ color: '#fca5a5', fontWeight: '700' }}>{prediction.bullishProbability ?? 50}%</span>
               </div>
-
-              {/* 外部即時行情連結 */}
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <a
-                  href="https://tw.stock.yahoo.com/future/WTX&"
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ fontSize: '0.75rem', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '3px', textDecoration: 'none', background: 'rgba(59, 130, 246, 0.15)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(59, 130, 246, 0.3)' }}
-                >
-                  🇹🇼 台指期夜盤 (WTX&) <ExternalLink size={11} />
-                </a>
-                <a
-                  href="https://tw.stock.yahoo.com/markets"
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ fontSize: '0.75rem', color: '#a78bfa', display: 'flex', alignItems: 'center', gap: '3px', textDecoration: 'none', background: 'rgba(139, 92, 246, 0.15)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(139, 92, 246, 0.3)' }}
-                >
-                  🇺🇸 美股期指與國際盤 <ExternalLink size={11} />
-                </a>
+              <div style={{ width: '100%', height: '7px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ width: `${prediction.bullishProbability ?? 50}%`, height: '100%', background: 'linear-gradient(90deg, #f87171, #ef4444)', borderRadius: '4px' }} />
               </div>
             </div>
 
-            {/* 晚上氛圍快速情境切換 */}
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => setNightCatalyst('neutral')}
-                className="btn-secondary"
-                style={{
-                  fontSize: '0.76rem',
-                  padding: '4px 10px',
-                  background: nightCatalyst === 'neutral' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-                  borderColor: nightCatalyst === 'neutral' ? '#fff' : 'var(--border-subtle)',
-                  color: nightCatalyst === 'neutral' ? '#fff' : 'var(--text-muted)'
-                }}
-              >
-                ⚖️ 基準 (純日 K)
-              </button>
-              <button
-                type="button"
-                onClick={() => setNightCatalyst('bullish')}
-                className="btn-secondary"
-                style={{
-                  fontSize: '0.76rem',
-                  padding: '4px 10px',
-                  background: nightCatalyst === 'bullish' ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.04)',
-                  borderColor: nightCatalyst === 'bullish' ? '#ef4444' : 'var(--border-subtle)',
-                  color: nightCatalyst === 'bullish' ? '#fca5a5' : '#f87171'
-                }}
-              >
-                🚀 美股/夜盤大漲 (+1%↑)
-              </button>
-              <button
-                type="button"
-                onClick={() => setNightCatalyst('bearish')}
-                className="btn-secondary"
-                style={{
-                  fontSize: '0.76rem',
-                  padding: '4px 10px',
-                  background: nightCatalyst === 'bearish' ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.04)',
-                  borderColor: nightCatalyst === 'bearish' ? '#10b981' : 'var(--border-subtle)',
-                  color: nightCatalyst === 'bearish' ? '#6ee7b7' : '#34d399'
-                }}
-              >
-                🔻 美股/夜盤重挫 (-1%↓)
-              </button>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                <span style={{ color: '#fcd34d', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Minus size={14} /> 區間整理
+                </span>
+                <span className="font-mono" style={{ color: '#fcd34d', fontWeight: '700' }}>{prediction.neutralProbability ?? 20}%</span>
+              </div>
+              <div style={{ width: '100%', height: '7px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ width: `${prediction.neutralProbability ?? 20}%`, height: '100%', background: 'linear-gradient(90deg, #fbbf24, #f59e0b)', borderRadius: '4px' }} />
+              </div>
             </div>
 
-            {/* 動態連動提示 */}
-            {nightCatalyst === 'bullish' && (
-              <div style={{ marginTop: '8px', fontSize: '0.78rem', color: '#fca5a5', lineHeight: '1.4' }}>
-                ✨ <strong>夜盤助攻加權</strong>：美股期指或台指夜盤強勢，明日台股個股跳空開高挑戰「天花板」機率增加！可留意早盤量能換手。
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                <span style={{ color: '#6ee7b7', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <TrendingDown size={14} /> 偏空回測
+                </span>
+                <span className="font-mono" style={{ color: '#6ee7b7', fontWeight: '700' }}>{prediction.bearishProbability ?? 30}%</span>
               </div>
-            )}
-            {nightCatalyst === 'bearish' && (
-              <div style={{ marginTop: '8px', fontSize: '0.78rem', color: '#6ee7b7', lineHeight: '1.4' }}>
-                ⚠️ <strong>夜盤逆風加權</strong>：美股或台指夜盤拉回下殺，明日需嚴防跳空開低回測「地板」防守價，早盤切勿衝動追價！
+              <div style={{ width: '100%', height: '7px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ width: `${prediction.bearishProbability ?? 30}%`, height: '100%', background: 'linear-gradient(90deg, #34d399, #10b981)', borderRadius: '4px' }} />
               </div>
-            )}
+            </div>
           </div>
 
-          {prediction.beginnerAdvice && (
-            <div style={{ marginBottom: '16px', padding: '16px', borderRadius: '10px', background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(239, 68, 68, 0.15) 100%)', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                <div style={{ fontSize: '0.95rem', color: '#fbbf24', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Target size={18} /> 新手小白買賣建議
-                </div>
-                {prediction.actionDecision && (
-                  <div style={{
-                    padding: '4px 12px',
-                    borderRadius: '6px',
-                    fontWeight: '900',
-                    fontSize: '1.05rem',
-                    color: '#fff',
-                    background: prediction.actionDecision.includes('買') ? '#10b981' : prediction.actionDecision.includes('賣') ? '#ef4444' : '#f59e0b',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                  }}>
-                    {prediction.actionDecision}
-                  </div>
-                )}
-              </div>
-              <div style={{ fontSize: '1.05rem', fontWeight: '700', color: '#ffffff', lineHeight: '1.5' }}>
-                {prediction.beginnerAdvice}
-              </div>
-            </div>
-          )}
-
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: '1.5' }}>
-            {prediction.sentimentSummary}
-          </p>
-
-          {/* 勝率進度條 (依據夜盤動態加權) */}
-          {(() => {
-            const rawBull = prediction.bullishProbability ?? 50;
-            const rawBear = prediction.bearishProbability ?? 30;
-            const rawNeut = prediction.neutralProbability ?? 20;
-
-            let effBull = rawBull;
-            let effBear = rawBear;
-            let effNeut = rawNeut;
-
-            if (nightCatalyst === 'bullish') {
-              effBull = Math.min(rawBull + 18, 92);
-              effBear = Math.max(rawBear - 12, 3);
-              effNeut = Math.max(100 - effBull - effBear, 5);
-            } else if (nightCatalyst === 'bearish') {
-              effBear = Math.min(rawBear + 18, 92);
-              effBull = Math.max(rawBull - 12, 3);
-              effNeut = Math.max(100 - effBull - effBear, 5);
-            }
-
-            return (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {/* 看多 */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
-                    <span style={{ color: '#fca5a5', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <TrendingUp size={14} /> 🚀 容易上漲 / 建議買進
-                      {nightCatalyst === 'bullish' && <span style={{ fontSize: '0.7rem', color: '#fca5a5' }}>(夜盤+18%)</span>}
-                    </span>
-                    <span className="font-mono" style={{ color: '#fca5a5', fontWeight: '700' }}>{effBull}%</span>
-                  </div>
-                  <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div style={{ width: `${effBull}%`, height: '100%', background: 'linear-gradient(90deg, #f87171, #ef4444)', borderRadius: '4px', transition: 'width 0.5s ease' }} />
-                  </div>
-                </div>
-
-                {/* 盤整 */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
-                    <span style={{ color: '#fcd34d', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Minus size={14} /> ⚠️ 區間震盪 / 建議觀望
-                    </span>
-                    <span className="font-mono" style={{ color: '#fcd34d', fontWeight: '700' }}>{effNeut}%</span>
-                  </div>
-                  <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div style={{ width: `${effNeut}%`, height: '100%', background: 'linear-gradient(90deg, #fbbf24, #f59e0b)', borderRadius: '4px', transition: 'width 0.5s ease' }} />
-                  </div>
-                </div>
-
-                {/* 看空 */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
-                    <span style={{ color: '#6ee7b7', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <TrendingDown size={14} /> 🔻 容易下跌 / 快逃或別買
-                      {nightCatalyst === 'bearish' && <span style={{ fontSize: '0.7rem', color: '#6ee7b7' }}>(夜盤+18%)</span>}
-                    </span>
-                    <span className="font-mono" style={{ color: '#6ee7b7', fontWeight: '700' }}>{effBear}%</span>
-                  </div>
-                  <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div style={{ width: `${effBear}%`, height: '100%', background: 'linear-gradient(90deg, #34d399, #10b981)', borderRadius: '4px', transition: 'width 0.5s ease' }} />
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          <div style={{ marginTop: '20px', padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-subtle)' }}>
-            <div style={{ fontSize: '0.8rem', color: '#60a5fa', fontWeight: '700', marginBottom: '4px' }}>明日走勢白話推演：</div>
-            <p style={{ fontSize: '0.88rem', color: '#f1f5f9', lineHeight: '1.6', whiteSpace: 'pre-line' }}>
-              {prediction.nextDayForecast}
+          {/* 情境推演 */}
+          <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-subtle)' }}>
+            <p style={{ fontSize: '0.86rem', color: '#f1f5f9', lineHeight: '1.6', margin: 0, whiteSpace: 'pre-line' }}>
+              {prediction.nextDayForecast || prediction.sentimentSummary}
             </p>
           </div>
         </div>
 
-      </div>
-
-      {/* 3. 關鍵價位階梯 & 操盤策略錦囊 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-        
-        {/* 關鍵支撐與壓力階梯 (小白話天花板與地板) */}
-        <div className="glass-panel" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+        {/* 右側：關鍵「天花板 (壓力)」與「地板 (支撐)」 */}
+        <div className="glass-panel" style={{ padding: '22px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Target size={18} color="#f59e0b" />
-              <span>關鍵「天花板」與「地板」價位</span>
+              <span>天花板 (壓力) 與 地板 (支撐)</span>
             </h3>
             <span style={{ fontSize: '0.72rem', color: '#f59e0b', background: 'rgba(245, 158, 11, 0.15)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
-              壓力與支撐
+              關鍵價位
             </span>
           </div>
 
-          {/* 新手白話導讀 */}
-          <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '16px' }}>
-            💡 <strong>大白話指南</strong>：股價往上衝容易在<strong>「天花板」</strong>撞牆卡關（適合獲利了結，切勿追高）；往下掉時在<strong>「地板」</strong>容易踩到彈簧反彈（守住可買，若跌破地板代表漏水要快逃！）。
-          </p>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             {/* 上方天花板 (壓力) */}
-            <div style={{ background: 'rgba(239, 68, 68, 0.06)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(239, 68, 68, 0.25)' }}>
-              <div style={{ fontSize: '0.82rem', color: '#f87171', fontWeight: '800', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <TrendingUp size={15} /> 🔴 上方天花板 (撞牆卡關價)
+            <div style={{ background: 'rgba(239, 68, 68, 0.06)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.25)' }}>
+              <div style={{ fontSize: '0.8rem', color: '#f87171', fontWeight: '800', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <TrendingUp size={14} /> 🔴 天花板 (賣壓)
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {prediction.resistanceLevels?.map((lvl, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
-                      {i === 0 ? '第一道卡關價' : i === 1 ? '第二道賣壓區' : '歷史大壓力'}
-                    </span>
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>{i === 0 ? '第一壓力' : i === 1 ? '第二壓力' : '歷史大壓'}</span>
                     <span className="font-mono" style={{ fontWeight: '700', color: '#ffffff' }}>{lvl} 元</span>
                   </div>
                 ))}
@@ -472,51 +409,88 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
             </div>
 
             {/* 下方地板 (支撐) */}
-            <div style={{ background: 'rgba(16, 185, 129, 0.06)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
-              <div style={{ fontSize: '0.82rem', color: '#34d399', fontWeight: '800', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <TrendingDown size={15} /> 🟢 下方地板 (彈簧防守價)
+            <div style={{ background: 'rgba(16, 185, 129, 0.06)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
+              <div style={{ fontSize: '0.8rem', color: '#34d399', fontWeight: '800', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <TrendingDown size={14} /> 🟢 地板 (支撐)
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {prediction.supportLevels?.map((lvl, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
-                      {i === 0 ? '第一道彈簧價' : i === 1 ? '關鍵防守線' : '最後保命停損'}
-                    </span>
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>{i === 0 ? '第一支撐' : i === 1 ? '關鍵防守' : '停損底線'}</span>
                     <span className="font-mono" style={{ fontWeight: '700', color: '#ffffff' }}>{lvl} 元</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
-        </div>
 
-        {/* 專家級 AI 操盤錦囊 */}
-        <div className="glass-panel" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Zap size={18} color="#10b981" />
-              <span>AI 實戰操盤建議</span>
-            </h3>
-            <span style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '4px', background: 'rgba(239, 68, 68, 0.1)', color: '#fca5a5', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
-              {prediction.riskLevel || '標準風險'}
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {prediction.tradingStrategy?.map((strat, idx) => (
-              <div key={idx} style={{ fontSize: '0.88rem', color: '#e2e8f0', lineHeight: '1.6', background: 'rgba(0,0,0,0.25)', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-                {strat}
-              </div>
-            ))}
-          </div>
-
-          <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            <ShieldAlert size={14} />
-            <span>提醒：技術分析為概率推演，請嚴格執行資金控管與停損紀律。</span>
-          </div>
+          {/* 操盤錦囊精華 */}
+          {prediction.tradingStrategy?.length > 0 && (
+            <div style={{ marginTop: '14px', padding: '10px 12px', borderRadius: '6px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ fontSize: '0.78rem', color: '#10b981', fontWeight: '700', marginBottom: '4px' }}>⚡ 操盤關鍵：</div>
+              <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '0.82rem', color: '#cbd5e1', lineHeight: '1.5' }}>
+                {prediction.tradingStrategy.map((s, idx) => (
+                  <li key={idx}>{s}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
       </div>
+
+      {/* 4. 鎖定 K 線形態 */}
+      {detectedPatterns && detectedPatterns.length > 0 && (
+        <div className="glass-panel" style={{ padding: '22px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Award size={18} color="#8b5cf6" />
+              <span>鎖定之 K 線型態特徵</span>
+            </h3>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              共鎖定 {detectedPatterns.length} 個型態
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
+            {detectedPatterns.map((item, idx) => {
+              let matchedEncyclopedia = KLINE_PATTERNS.find(p => 
+                p.id === item.patternId || 
+                item.name?.toLowerCase().includes(p.name.toLowerCase()) || 
+                item.name?.includes(p.chineseName) ||
+                (item.description && (item.description.includes(p.name.split(' ')[0]) || item.description.includes(p.chineseName.split(' ')[0])))
+              );
+
+              return (
+                <div key={idx} className="glass-card" style={{ padding: '14px', borderLeft: '4px solid #8b5cf6' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <span style={{ fontWeight: '800', fontSize: '0.98rem', color: '#f8fafc' }}>
+                      {matchedEncyclopedia ? matchedEncyclopedia.name : item.name}
+                    </span>
+                    <span style={{ fontSize: '0.72rem', padding: '2px 6px', borderRadius: '10px', background: 'rgba(139, 92, 246, 0.2)', color: '#c4b5fd', fontWeight: '600' }}>
+                      符合度 {item.confidence}%
+                    </span>
+                  </div>
+                  
+                  <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: '1.4', margin: '0 0 6px 0' }}>
+                    {item.description}
+                  </p>
+
+                  {matchedEncyclopedia && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveModalPattern(matchedEncyclopedia)}
+                      style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: '0.78rem', cursor: 'pointer', padding: 0, textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      查看【{matchedEncyclopedia.name.split(' ')[0]}】操盤守則 →
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* 4. 點擊形態彈出的百科詳解 Modal (不切換頁面) */}
       {activeModalPattern && (
