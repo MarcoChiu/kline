@@ -1,12 +1,15 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
-import { Download, Layers, TrendingUp, ShieldAlert, Target } from 'lucide-react';
+import { Download, Layers, TrendingUp, ShieldAlert, Target, Info } from 'lucide-react';
+import { KLINE_PATTERNS } from '../data/klinePatterns';
 
 /**
  * Yahoo 奇摩股市風格 K 線圖表與籌碼 K 線標註系統
  */
-export default function YahooKlineCanvas({ stockData, prediction, detectedPatterns }) {
+export default function YahooKlineCanvas({ stockData, prediction, detectedPatterns, onPatternClick }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
+  const badgeHitBoxRef = useRef(null);
+  const [isHoveringBadge, setIsHoveringBadge] = useState(false);
 
   // 均線顯示狀態
   const [maVisible, setMaVisible] = useState({
@@ -407,25 +410,34 @@ export default function YahooKlineCanvas({ stockData, prediction, detectedPatter
         }
       }
 
-      // (D) 最新 K 棒形態辨識標籤氣泡 (籌碼 K 線樣式)
-      if (detectedPatterns && detectedPatterns.length > 0 && historicalData.length > 0) {
+      // (D) 最新 K 棒形態辨識標籤氣泡 (籌碼 K 線樣式，支援點擊彈出百科)
+      if (showChipAnnotations && detectedPatterns && detectedPatterns.length > 0 && historicalData.length > 0) {
         const latestIdx = historicalData.length - 1;
         const lx = getX(latestIdx);
         const latestCandle = historicalData[latestIdx];
         const ly = getY(latestCandle.high);
 
         const patternName = detectedPatterns[0].name || '形態訊號';
-        const tagText = `🔥 ${patternName}`;
+        const tagText = onPatternClick ? `🔥 ${patternName} 👆點擊詳解` : `🔥 ${patternName}`;
         
         ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         const textWidth = ctx.measureText(tagText).width;
-        const boxWidth = textWidth + 14;
-        const boxHeight = 20;
+        const boxWidth = textWidth + 16;
+        const boxHeight = 22;
         const boxX = Math.max(paddingLeft, Math.min(lx - boxWidth / 2, width - paddingRight - boxWidth));
-        const boxY = Math.max(topChartTop + 5, ly - 28);
+        const boxY = Math.max(topChartTop + 5, ly - 30);
+
+        // 記錄氣泡感應區域供滑鼠點擊與懸浮使用
+        badgeHitBoxRef.current = {
+          x: boxX,
+          y: boxY,
+          width: boxWidth,
+          height: boxHeight,
+          pattern: detectedPatterns[0]
+        };
 
         // 氣泡底色 (相容性安全繪製)
-        ctx.fillStyle = '#1e293b';
+        ctx.fillStyle = isHoveringBadge ? '#0f172a' : '#1e293b';
         ctx.beginPath();
         if (ctx.roundRect) {
           ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 4);
@@ -433,21 +445,23 @@ export default function YahooKlineCanvas({ stockData, prediction, detectedPatter
           ctx.rect(boxX, boxY, boxWidth, boxHeight);
         }
         ctx.fill();
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = isHoveringBadge ? '#38bdf8' : '#0284c7';
+        ctx.lineWidth = isHoveringBadge ? 2 : 1;
         ctx.stroke();
 
         // 氣泡文字
-        ctx.fillStyle = '#38bdf8';
+        ctx.fillStyle = isHoveringBadge ? '#7dd3fc' : '#38bdf8';
         ctx.textAlign = 'left';
-        ctx.fillText(tagText, boxX + 7, boxY + 14);
+        ctx.fillText(tagText, boxX + 8, boxY + 15);
 
         // 箭頭指示線
-        ctx.strokeStyle = '#38bdf8';
+        ctx.strokeStyle = isHoveringBadge ? '#7dd3fc' : '#38bdf8';
         ctx.beginPath();
         ctx.moveTo(lx, boxY + boxHeight);
         ctx.lineTo(lx, ly - 2);
         ctx.stroke();
+      } else {
+        badgeHitBoxRef.current = null;
       }
 
       ctx.restore();
@@ -486,15 +500,31 @@ export default function YahooKlineCanvas({ stockData, prediction, detectedPatter
     const handleResize = () => renderChart();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [historicalData, maVisible, showChipAnnotations, hoverIndex, prediction, detectedPatterns]);
+  }, [historicalData, maVisible, showChipAnnotations, hoverIndex, prediction, detectedPatterns, isHoveringBadge]);
 
-  // 滑鼠互動：計算游標所在 K 棒索引
+  // 滑鼠互動：計算游標所在 K 棒索引與氣泡懸浮偵測
   const handleMouseMove = (e) => {
     const canvas = canvasRef.current;
     if (!canvas || historicalData.length === 0) return;
 
     const rect = canvas.getBoundingClientRect();
     const clientX = e.clientX - rect.left;
+    const clientY = e.clientY - rect.top;
+
+    // 檢查是否懸浮在型態標籤氣泡上
+    if (badgeHitBoxRef.current && showChipAnnotations) {
+      const { x, y, width, height } = badgeHitBoxRef.current;
+      if (clientX >= x - 2 && clientX <= x + width + 2 && clientY >= y - 2 && clientY <= y + height + 2) {
+        canvas.style.cursor = 'pointer';
+        if (!isHoveringBadge) setIsHoveringBadge(true);
+      } else {
+        canvas.style.cursor = 'crosshair';
+        if (isHoveringBadge) setIsHoveringBadge(false);
+      }
+    } else {
+      canvas.style.cursor = 'crosshair';
+    }
+
     const paddingLeft = 10;
     const paddingRight = 60;
     const chartWidth = canvas.clientWidth - paddingLeft - paddingRight;
@@ -513,6 +543,45 @@ export default function YahooKlineCanvas({ stockData, prediction, detectedPatter
 
   const handleMouseLeave = () => {
     setHoverIndex(null);
+    if (isHoveringBadge) setIsHoveringBadge(false);
+  };
+
+  // 點擊 Canvas 上的形態氣泡觸發 Modal
+  const handleCanvasClick = (e) => {
+    if (!badgeHitBoxRef.current || !onPatternClick || !showChipAnnotations) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.clientX - rect.left;
+    const clientY = e.clientY - rect.top;
+
+    const { x, y, width, height, pattern } = badgeHitBoxRef.current;
+    if (clientX >= x - 6 && clientX <= x + width + 6 && clientY >= y - 6 && clientY <= y + height + 6) {
+      // 搜尋百科完整資料庫
+      let matched = KLINE_PATTERNS.find(p => 
+        p.id === pattern?.patternId || 
+        (pattern?.name && p.name && (pattern.name.toLowerCase().includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(pattern.name.toLowerCase()))) ||
+        (pattern?.name && p.chineseName && (pattern.name.includes(p.chineseName) || p.chineseName.includes(pattern.name))) ||
+        (pattern?.description && (pattern.description.includes(p.name.split(' ')[0]) || pattern.description.includes(p.chineseName.split(' ')[0])))
+      );
+
+      if (!matched && pattern) {
+        matched = {
+          name: pattern.name,
+          chineseName: pattern.name,
+          summary: pattern.description || '由 AI 視覺辨識根據最新走勢特徵判定之形態。',
+          marketPsychology: '最新 K 棒呈現多空雙方激烈博弈，請密切留意明日開盤強弱訊號。',
+          sentiment: 'bullish',
+          winRate: pattern.confidence || 80,
+          tradingRules: ['跌破當前關鍵防守線或前日低點請嚴格執行停損。', '若放量突破上方壓力天花板可順勢偏多應對。']
+        };
+      }
+
+      if (matched) {
+        onPatternClick(matched);
+      }
+    }
   };
 
   // 下載高畫質圖檔功能
@@ -688,10 +757,11 @@ export default function YahooKlineCanvas({ stockData, prediction, detectedPatter
           overflow: 'hidden',
           borderRadius: '4px',
           background: '#ffffff',
-          cursor: 'crosshair'
+          cursor: isHoveringBadge ? 'pointer' : 'crosshair'
         }}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
+        onClick={handleCanvasClick}
       >
         <canvas
           ref={canvasRef}

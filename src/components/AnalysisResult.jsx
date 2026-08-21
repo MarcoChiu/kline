@@ -272,6 +272,7 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
           stockData={result.stockData}
           prediction={prediction}
           detectedPatterns={detectedPatterns}
+          onPatternClick={(pattern) => setActiveModalPattern(pattern)}
         />
       )}
 
