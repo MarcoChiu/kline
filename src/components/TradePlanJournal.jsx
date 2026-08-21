@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Bookmark, RefreshCw, Trash2, CheckCircle2, AlertTriangle, Target, TrendingUp, ShieldAlert, ArrowUpRight, ArrowDownRight, ExternalLink, Award, PlusCircle, Check, Clock } from 'lucide-react';
+import { Bookmark, RefreshCw, Trash2, CheckCircle2, AlertTriangle, Target, TrendingUp, ShieldAlert, ArrowUpRight, ArrowDownRight, ExternalLink } from 'lucide-react';
 import { fetchStockData } from '../services/yahooFinanceService';
 
 /**
@@ -233,7 +233,7 @@ export default function TradePlanJournal({ onSelectStockToAnalyze }) {
               </p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px, 100%), 1fr))', gap: '16px' }}>
               {filteredPlans.map(plan => {
                 const live = livePrices[plan.stockCode];
                 const currentPrice = live ? live.price : plan.entryPrice;
@@ -400,7 +400,7 @@ export default function TradePlanJournal({ onSelectStockToAnalyze }) {
               尚未累積 AI 預測快照。每次在 K 線分析儀完成分析時，系統將自動建檔並於後續進行成效對照。
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: '12px' }}>
               {predictionLogs.map((log, idx) => {
                 const live = livePrices[log.stockCode];
                 const current = live ? live.price : log.initialPrice;

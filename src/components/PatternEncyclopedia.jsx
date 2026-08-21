@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, BookOpen, ChevronRight, Award, Zap, Shield, TrendingUp, TrendingDown, Minus, Star, ArrowUpDown } from 'lucide-react';
+import { Search, BookOpen, ChevronRight, Award, Zap, Shield, TrendingUp, Star, ArrowUpDown } from 'lucide-react';
 import { KLINE_PATTERNS } from '../data/klinePatterns';
 
 /**
@@ -211,8 +211,8 @@ export default function PatternEncyclopedia({ selectedPatternId, onSelectPattern
           </div>
 
           {/* 搜尋框與排序 */}
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <div style={{ position: 'relative', minWidth: '220px', flex: '1 1 200px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', width: '100%' }}>
+            <div style={{ position: 'relative', minWidth: 0, flex: '1 1 180px' }}>
               <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
               <input
                 type="text"
@@ -383,7 +383,7 @@ export default function PatternEncyclopedia({ selectedPatternId, onSelectPattern
           </button>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '18px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: '18px' }}>
           {sortedPatterns.map((pattern, index) => {
             const isBull = pattern.sentiment === 'bullish';
             const isBear = pattern.sentiment === 'bearish';

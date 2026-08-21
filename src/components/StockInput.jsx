@@ -58,13 +58,13 @@ export default function StockInput({ onStockSubmit, isAnalyzing }) {
       </div>
 
       {/* 核心輸入區：輸入台股代號自動分析 */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', background: 'rgba(59, 130, 246, 0.08)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.25)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', background: 'rgba(59, 130, 246, 0.08)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.25)', maxWidth: '100%', boxSizing: 'border-box' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <div style={{ fontSize: '0.95rem', color: '#e2e8f0', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px', minWidth: '130px' }}>
+          <div style={{ fontSize: '0.95rem', color: '#e2e8f0', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Sparkles size={18} color="#60a5fa" />
             輸入股號自動分析：
           </div>
-          <div style={{ display: 'flex', gap: '8px', flex: '1 1 280px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '8px', flex: '1 1 240px', minWidth: 0, flexWrap: 'wrap' }}>
             <input
               type="text"
               placeholder="輸入台股代號 (如 2330, 8069)"
@@ -83,9 +83,10 @@ export default function StockInput({ onStockSubmit, isAnalyzing }) {
                 padding: '10px 14px',
                 color: '#fff',
                 fontSize: '1.05rem',
-                flex: '1 1 140px',
-                minWidth: '130px',
-                outline: 'none'
+                flex: '1 1 120px',
+                minWidth: 0,
+                outline: 'none',
+                boxSizing: 'border-box'
               }}
             />
             <button
@@ -142,7 +143,8 @@ export default function StockInput({ onStockSubmit, isAnalyzing }) {
               <div style={{
                 position: 'absolute',
                 bottom: 'calc(100% + 8px)',
-                left: '20px',
+                left: '0',
+                maxWidth: 'calc(100vw - 32px)',
                 background: 'rgba(15, 23, 42, 0.96)',
                 backdropFilter: 'blur(12px)',
                 border: '1px solid rgba(139, 92, 246, 0.4)',
@@ -150,11 +152,10 @@ export default function StockInput({ onStockSubmit, isAnalyzing }) {
                 padding: '10px 14px',
                 boxShadow: '0 10px 25px rgba(0, 0, 0, 0.6)',
                 zIndex: 1000,
-                whiteSpace: 'nowrap',
-                pointerEvents: 'none',
                 fontSize: '0.8rem',
                 color: '#e2e8f0',
-                lineHeight: '1.6'
+                lineHeight: '1.6',
+                boxSizing: 'border-box'
               }}>
                 <div style={{ color: '#a78bfa', fontWeight: '700', marginBottom: '4px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '3px' }}>
                   台股與期指連動涵蓋清單：
@@ -192,7 +193,8 @@ export default function StockInput({ onStockSubmit, isAnalyzing }) {
               <div style={{
                 position: 'absolute',
                 bottom: 'calc(100% + 8px)',
-                left: '20px',
+                left: '0',
+                maxWidth: 'calc(100vw - 32px)',
                 background: 'rgba(15, 23, 42, 0.96)',
                 backdropFilter: 'blur(12px)',
                 border: '1px solid rgba(56, 189, 248, 0.4)',
@@ -200,11 +202,10 @@ export default function StockInput({ onStockSubmit, isAnalyzing }) {
                 padding: '10px 14px',
                 boxShadow: '0 10px 25px rgba(0, 0, 0, 0.6)',
                 zIndex: 1000,
-                whiteSpace: 'nowrap',
-                pointerEvents: 'none',
                 fontSize: '0.8rem',
                 color: '#e2e8f0',
-                lineHeight: '1.6'
+                lineHeight: '1.6',
+                boxSizing: 'border-box'
               }}>
                 <div style={{ color: '#38bdf8', fontWeight: '700', marginBottom: '4px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '3px' }}>
                   美股與主要外盤涵蓋清單：

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Calculator, ShieldCheck, DollarSign, Target, TrendingUp, BookmarkPlus, Check, Percent } from 'lucide-react';
+import { Calculator, ShieldCheck, DollarSign, Target, TrendingUp, BookmarkPlus, Check } from 'lucide-react';
 
 /**
  * 台股實戰部位風控與手續費計算器 (Position Sizing & Risk/Reward Calculator)
@@ -162,7 +162,7 @@ export default function PositionRiskCalculator({ stockCode, stockName, currentPr
       </div>
 
       {/* 參數輸入區 (網格排版) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '18px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '14px', marginBottom: '18px' }}>
         
         {/* 帳戶總資金 */}
         <div style={{ background: 'rgba(0,0,0,0.35)', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
@@ -288,7 +288,7 @@ export default function PositionRiskCalculator({ stockCode, stockName, currentPr
       </div>
 
       {/* 精算結果卡片看板 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '12px' }}>
         
         {/* 1. 建議下單部位 */}
         <div style={{ background: 'rgba(59, 130, 246, 0.08)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(59, 130, 246, 0.25)' }}>

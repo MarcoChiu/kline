@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Plus, RotateCcw, Trash2, TrendingUp, Info, Sparkles, X, Cpu, Bot, BarChart2, Shield, Target, Flame, Droplets, Scale } from 'lucide-react';
+import { Plus, Trash2, Info, Sparkles, X, Bot, BarChart2, Target, Flame, Droplets, Scale } from 'lucide-react';
 import { PatternSVG } from './PatternEncyclopedia';
 import { getPatternSimulatorCandles, KLINE_PATTERNS } from '../data/klinePatterns';
 import { analyzeSimulatedCandles } from '../services/aiVisionService';
@@ -475,7 +475,7 @@ export default function InteractiveCanvas({ loadedPattern, onClearLoadedPattern,
             </span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', alignItems: 'start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: '14px', alignItems: 'start' }}>
             
             {/* 主力心態分析 */}
             <div style={{ background: 'rgba(0,0,0,0.3)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>

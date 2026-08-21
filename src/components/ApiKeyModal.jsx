@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Key, ShieldCheck, ExternalLink, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
-import { GEMINI_MODEL_OPTIONS, fetchAvailableGeminiModels, getGeminiModelCandidates } from '../services/aiVisionService';
+import { GEMINI_MODEL_OPTIONS, fetchAvailableGeminiModels } from '../services/aiVisionService';
 
 export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, selectedModel = 'auto', onSaveModel, patternCount = 12, onSavePatternCount }) {
   const [inputKey, setInputKey] = useState(apiKey || '');

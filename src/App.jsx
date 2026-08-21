@@ -92,9 +92,15 @@ export default function App() {
         result = generateLocalQuantitativeAnalysis(stockData, marketContext);
       }
 
+      const finalStockName = result?.stockName || stockData?.stockName || stockCode;
+
       setAnalysisResult({
         ...result,
-        stockData: result?.stockData || stockData
+        stockName: finalStockName,
+        stockData: {
+          ...(result?.stockData || stockData),
+          stockName: finalStockName
+        }
       });
 
       // 自動記錄至 AI 預測成效歷史快照 (LocalStorage)
@@ -105,7 +111,7 @@ export default function App() {
           id: `pred_${Date.now()}`,
           date: new Date().toISOString(),
           stockCode: result?.stockCode || stockCode,
-          stockName: result?.stockName || stockData?.stockName,
+          stockName: finalStockName,
           sentiment: isBull ? 'bullish' : 'bearish',
           probability: isBull ? result?.prediction?.bullishProbability : result?.prediction?.bearishProbability,
           initialPrice: result?.closePrice || result?.currentPrice || stockData?.latest?.close,
@@ -134,7 +140,7 @@ export default function App() {
   // (已移除圖片辨識功能，專注於即時資料抓取)
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '0 16px 40px' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '0 12px 40px', maxWidth: '100vw', overflowX: 'hidden', boxSizing: 'border-box' }}>
       
       {/* 頂部導航 */}
       <Header
@@ -145,7 +151,7 @@ export default function App() {
       />
 
       {/* 主要內容區 */}
-      <main style={{ maxWidth: '1280px', width: '100%', margin: '0 auto', flex: 1 }}>
+      <main style={{ maxWidth: '1280px', width: '100%', margin: '0 auto', flex: 1, minWidth: 0, boxSizing: 'border-box' }}>
         
         {activeTab === 'analyzer' && (
           <div>

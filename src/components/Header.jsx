@@ -6,8 +6,8 @@ export default function Header({ activeTab, setActiveTab, hasApiKey, onOpenApiKe
   const buildTime = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'DEV';
 
   return (
-    <header className="glass-panel" style={{ margin: '12px auto 18px', padding: '12px 18px', maxWidth: '1280px', width: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+    <header className="glass-panel" style={{ margin: '12px auto 18px', padding: '12px 18px', maxWidth: '1280px', width: '100%', boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', maxWidth: '100%', boxSizing: 'border-box' }}>
         
         {/* Logo & Title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

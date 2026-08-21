@@ -1,15 +1,18 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
-import { Download, Layers, TrendingUp, ShieldAlert, Target, Info } from 'lucide-react';
+import { Download, Layers } from 'lucide-react';
 import { KLINE_PATTERNS } from '../data/klinePatterns';
 
 /**
  * Yahoo 奇摩股市風格 K 線圖表與籌碼 K 線標註系統
  */
-export default function YahooKlineCanvas({ stockData, prediction, detectedPatterns, onPatternClick }) {
+export default function YahooKlineCanvas({ stockData, stockName: propStockName, prediction, detectedPatterns, onPatternClick }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const badgeHitBoxRef = useRef(null);
   const [isHoveringBadge, setIsHoveringBadge] = useState(false);
+
+  // 統一採用傳入或分析得出之中文股票名稱
+  const effectiveStockName = propStockName || stockData?.stockName || stockData?.symbol || '台股標的';
 
   // 均線顯示狀態
   const [maVisible, setMaVisible] = useState({
@@ -78,11 +81,34 @@ export default function YahooKlineCanvas({ stockData, prediction, detectedPatter
     const bottomChartHeight = 110;
     const chartWidth = width - paddingLeft - paddingRight;
 
-    // 1. 背景浮水印 "Yahoo! 股市" 風格
+    // 1. 繪製股票中文標題、代碼與價格行情 (確保產生的圖片清楚包含中文股名)
     ctx.save();
-    ctx.font = '700 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = 'rgba(226, 232, 240, 0.45)';
-    ctx.fillText('Yahoo! 股市', paddingLeft + 15, topChartTop + 35);
+    ctx.font = 'bold 17px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#0f172a';
+    ctx.textAlign = 'left';
+    const stockDisplayName = effectiveStockName;
+    const stockSymbolText = stockData?.symbol ? `(${stockData.symbol})` : '';
+    ctx.fillText(`${stockDisplayName} ${stockSymbolText}`.trim(), paddingLeft + 12, topChartTop + 24);
+
+    if (currentItem) {
+      const isUp = priceChange > 0;
+      const isDown = priceChange < 0;
+      const priceColor = isUp ? '#ef4444' : isDown ? '#10b981' : '#64748b';
+      ctx.font = 'bold 13px "JetBrains Mono", monospace';
+      ctx.fillStyle = priceColor;
+      const priceText = `${currentItem.close}  ${priceChange > 0 ? '+' : ''}${priceChange} (${changePercent > 0 ? '+' : ''}${changePercent}%)`;
+      ctx.fillText(priceText, paddingLeft + 12, topChartTop + 42);
+
+      ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText(`資料日期：${currentItem.date}`, paddingLeft + 12, topChartTop + 57);
+    }
+
+    // Yahoo! 股市 水印靠右上方
+    ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = 'rgba(203, 213, 225, 0.4)';
+    ctx.textAlign = 'right';
+    ctx.fillText('Yahoo! 股市', width - paddingRight - 10, topChartTop + 24);
     ctx.restore();
 
     // 2. 計算主圖價格範圍 (OHLC + 均線)
@@ -500,7 +526,7 @@ export default function YahooKlineCanvas({ stockData, prediction, detectedPatter
     const handleResize = () => renderChart();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [historicalData, maVisible, showChipAnnotations, hoverIndex, prediction, detectedPatterns, isHoveringBadge]);
+  }, [historicalData, effectiveStockName, maVisible, showChipAnnotations, hoverIndex, prediction, detectedPatterns, isHoveringBadge]);
 
   // 滑鼠互動：計算游標所在 K 棒索引與氣泡懸浮偵測
   const handleMouseMove = (e) => {
@@ -584,13 +610,13 @@ export default function YahooKlineCanvas({ stockData, prediction, detectedPatter
     }
   };
 
-  // 下載高畫質圖檔功能
+  // 下載高畫質圖檔功能 (使用分析/校正後的繁體中文股名)
   const handleDownloadImage = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const link = document.createElement('a');
-    const stockName = stockData?.stockName || 'Stock';
+    const stockName = effectiveStockName;
     const symbol = stockData?.symbol || '';
     const dateStr = currentItem?.date || new Date().toISOString().split('T')[0];
 
@@ -608,7 +634,7 @@ export default function YahooKlineCanvas({ stockData, prediction, detectedPatter
   const priceColor = isUp ? '#ef4444' : isDown ? '#10b981' : '#64748b';
 
   return (
-    <div className="glass-panel" style={{ padding: '20px', margin: '20px 0', background: '#ffffff', color: '#1e293b', border: '1px solid #e2e8f0', boxShadow: '0 10px 30px rgba(0, 0, 0, 0.15)' }}>
+    <div className="glass-panel" style={{ padding: '16px', margin: '16px 0', background: '#ffffff', color: '#1e293b', border: '1px solid #e2e8f0', boxShadow: '0 10px 30px rgba(0, 0, 0, 0.15)', maxWidth: '100%', boxSizing: 'border-box' }}>
       
       {/* 頂部操作工具列 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '14px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
@@ -616,7 +642,7 @@ export default function YahooKlineCanvas({ stockData, prediction, detectedPatter
         {/* 左側標籤 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ fontWeight: '800', fontSize: '1.2rem', color: '#0f172a', letterSpacing: '-0.02em' }}>
-            {stockData.stockName} <span style={{ color: '#64748b', fontWeight: '500', fontSize: '0.95rem' }}>({stockData.symbol})</span>
+            {effectiveStockName} <span style={{ color: '#64748b', fontWeight: '500', fontSize: '0.95rem' }}>({stockData.symbol})</span>
           </div>
           <span style={{ fontSize: '0.8rem', color: '#64748b', background: '#f8fafc', padding: '2px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
             資料時間：{currentItem ? currentItem.date : stockData.latest?.date}

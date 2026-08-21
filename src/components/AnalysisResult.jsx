@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, Minus, Target, ShieldAlert, Cpu, Award, Zap, Compass, X, Shield, Globe, ExternalLink, Calendar, CheckCircle2, BookmarkCheck, BarChart2, History, Calculator, Sparkles } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Target, ShieldAlert, Cpu, Award, Zap, Compass, X, Shield, Globe, BookmarkCheck, History, Sparkles } from 'lucide-react';
 import { KLINE_PATTERNS } from '../data/klinePatterns';
 import { PatternSVG } from './PatternEncyclopedia';
 import YahooKlineCanvas from './YahooKlineCanvas';
@@ -12,7 +12,6 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
   const [customCode, setCustomCode] = React.useState('');
   const [customPrice, setCustomPrice] = React.useState('');
   const [activeModalPattern, setActiveModalPattern] = React.useState(null);
-  const [nightCatalyst, setNightCatalyst] = React.useState('neutral'); // 'neutral' | 'bullish' | 'bearish'
 
   // 依據當前時間動態判定交易時態（必須在所有 early return 前調用）
   const sessionInfo = React.useMemo(() => {
@@ -311,7 +310,11 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
       {/* 2. Yahoo 奇摩標準風格 K 線圖表與籌碼 K 線標註系統 */}
       {result.stockData && result.stockData.historicalData && result.stockData.historicalData.length > 0 && (
         <YahooKlineCanvas
-          stockData={result.stockData}
+          stockData={{
+            ...result.stockData,
+            stockName: displayName
+          }}
+          stockName={displayName}
           prediction={prediction}
           detectedPatterns={detectedPatterns}
           onPatternClick={(pattern) => setActiveModalPattern(pattern)}
@@ -335,7 +338,7 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
 
           {/* 數據卡片列：台指期與大盤優先，美股與國際指數接續 */}
           {result.marketContext && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', marginBottom: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: '10px', marginBottom: '12px' }}>
               {[...(result.marketContext.futuresAndIndex || []), ...(result.marketContext.usMarkets || [])].map((item, idx) => {
                 const itemIsDown = item.priceChange < 0;
                 const itemIsFlat = item.priceChange === 0;
@@ -419,7 +422,7 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
           const stopLossPrice = booking.stopLossLimit || prediction.supportLevels?.[1] || movingAverages?.ma20 || (displayPrice ? (displayPrice * 0.95).toFixed(2) : '--');
 
           return (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '14px', alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '12px', marginBottom: '14px', alignItems: 'start' }}>
               
               {/* 1. 逢低掛單買進價 */}
               <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '10px', padding: '16px' }}>
@@ -621,7 +624,7 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
             </span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: '12px' }}>
             {detectedPatterns.map((item, idx) => {
               let matchedEncyclopedia = KLINE_PATTERNS.find(p => 
                 p.id === item.patternId || 
@@ -685,7 +688,7 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
           </div>
 
           {/* 1日/3日/5日/10日 回測數據卡片 */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(130px, 100%), 1fr))', gap: '10px', marginBottom: '14px' }}>
             {[
               { label: '持有 1 日 (T+1)', key: '1D' },
               { label: '持有 3 日 (T+3)', key: '3D' },
