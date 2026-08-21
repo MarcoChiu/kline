@@ -1078,5 +1078,180 @@ export const KLINE_PATTERNS = [
         { open: 78, close: 62, high: 58, low: 82, color: '#ef4444' }
       ]
     }
+  },
+  // ==========================================
+  // 【四大專著精選：實戰量價與高勝率飆股戰法】
+  // ==========================================
+  {
+    id: 'spring_shakeout',
+    name: '破底翻洗盤起漲底 (Spring / Shakeout Reversal)',
+    category: 'multi',
+    sentiment: 'bullish',
+    signalStrength: 'extreme',
+    winRate: 88,
+    isTopFrequent: true,
+    locationType: '箱型底層 / 假跌破誘空洗盤區',
+    entryRule: '當長紅K棒帶量站回前波支撐或箱型底部時立即切入進場',
+    stopLossRule: '以假跌破創下的最低點或進場點 3% 設為絕對防守停損線',
+    targetRule: '挑戰箱型頂部天花板，若帶量突破則展開波段主升段',
+    chineseName: '破底翻 / 假跌破真穿雲',
+    summary: '股價跌破關鍵支撐引發恐慌性停損後，隔日或數日內以帶量長紅快速收復失土，徹底吃掉所有空單籌碼。',
+    marketPsychology: '主力故意貫破支撐誘殺浮額並引誘空軍追空，隨後發動雷霆反擊將籌碼全數鎖碼，是波段飆股發動前的經典絕殺技！',
+    tradingRules: [
+      '跌破前低後迅速帶量收復，為機構主力洗盤的最強訊號。',
+      '停損設於破底最低點，盈虧比極佳。'
+    ],
+    svgConfig: {
+      type: 'multi',
+      bars: [
+        { open: 35, close: 58, high: 30, low: 62, color: '#10b981' },
+        { open: 60, close: 78, high: 55, low: 82, color: '#10b981' },
+        { open: 80, close: 25, high: 18, low: 85, color: '#ef4444' }
+      ]
+    }
+  },
+  {
+    id: 'testing_shadow',
+    name: '仙人指路試盤線 (Testing Upper Shadow)',
+    category: 'single',
+    sentiment: 'bullish',
+    signalStrength: 'high',
+    winRate: 84,
+    isTopFrequent: true,
+    locationType: '上升通道途中 / 整理突破前緣',
+    entryRule: '隔日開盤或盤中突破該上影線最高點時果斷加碼進場',
+    stopLossRule: '跌破該紅K棒實體開盤價或 MA5 週線即刻防守出場',
+    targetRule: '波段向上延伸挑戰上方實質壓力區',
+    chineseName: '仙人指路 / 向上試盤紅K',
+    summary: '在上升波段中，收出一根帶長上影線的紅K棒（且成交量溫和放大），看似遇壓，實為主力向上試探賣壓輕重。',
+    marketPsychology: '主力刻意向上攻擊測試天花板解套賣壓，若回測時未引發恐慌性殺盤，代表浮額已清洗乾淨，次日一旦越過上影線將開啟主升段！',
+    tradingRules: [
+      '收盤必須為實體紅K，且處於上升趨勢中。',
+      '突破該上影線頂點為標準起跑買點。'
+    ],
+    svgConfig: {
+      type: 'single',
+      open: 65,
+      close: 45,
+      high: 10,
+      low: 70,
+      color: '#ef4444'
+    }
+  },
+  {
+    id: 'ma_convergence_breakout',
+    name: '均線糾結帶量第一根長紅 (MA Convergence Breakout)',
+    category: 'multi',
+    sentiment: 'bullish',
+    signalStrength: 'extreme',
+    winRate: 89,
+    isTopFrequent: true,
+    locationType: '長期打底完成 / 均線糾結共振發散點',
+    entryRule: '第一根帶量長紅突破糾結均線群時即刻進場',
+    stopLossRule: '以長紅棒開盤價或跌破糾結之 MA20 月線作為停損點',
+    targetRule: '等距波段測量，預期迎來一整波中期多頭主升段',
+    chineseName: '均線糾結第一紅 / 波段起跑訊號',
+    summary: 'MA5、MA10、MA20、MA60 均線高度收斂糾結在一起，突然出現一根成交量放大 2 倍以上的飽滿長紅一舉穿透所有均線。',
+    marketPsychology: '籌碼沉澱極為徹底，各週期持股成本趨於一致，多方主力在此刻吹響總攻號角，展開新一輪波段趨勢！',
+    tradingRules: [
+      '均線必須收斂黏合，不能處於擴散狀態。',
+      '突破紅K棒必須爆量確認，嚴格以紅K下緣設防守。'
+    ],
+    svgConfig: {
+      type: 'multi',
+      bars: [
+        { open: 55, close: 52, high: 50, low: 57, color: '#ef4444' },
+        { open: 52, close: 54, high: 49, low: 56, color: '#10b981' },
+        { open: 54, close: 53, high: 51, low: 56, color: '#ef4444' },
+        { open: 54, close: 18, high: 12, low: 58, color: '#ef4444' }
+      ]
+    }
+  },
+  {
+    id: 'volume_dry_pullback',
+    name: '窒息量洗盤壓回不破 (Dry Volume Pullback)',
+    category: 'multi',
+    sentiment: 'bullish',
+    signalStrength: 'high',
+    winRate: 86,
+    isTopFrequent: true,
+    locationType: '初升段後首次壓回 / MA5-MA20 均線支撐區',
+    entryRule: '連續量縮至窒息量且回測均線止跌時低接上車',
+    stopLossRule: '跌破前波起漲紅K低點或失守 MA20 即刻停損',
+    targetRule: '再創新高，啟動第二波多頭攻勢',
+    chineseName: '量縮窒息洗盤 / 第二買點',
+    summary: '股價在帶量大漲後出現連續數日小幅回檔，但成交量急劇萎縮至近期均量的 1/3 以下，且穩守在關鍵均線之上。',
+    marketPsychology: '主力完全沒有出貨，僅是散戶短線獲利了結。窒息量代表市場賣壓枯竭，主力隨時將二次發動拉抬！',
+    tradingRules: [
+      '回檔過程成交量必須逐日遞減（價跌量縮）。',
+      '回測 MA5 或 MA20 均線不破為最佳風險報酬比買點。'
+    ],
+    svgConfig: {
+      type: 'multi',
+      bars: [
+        { open: 70, close: 25, high: 20, low: 75, color: '#ef4444' },
+        { open: 28, close: 36, high: 24, low: 40, color: '#10b981' },
+        { open: 36, close: 42, high: 32, low: 46, color: '#10b981' },
+        { open: 42, close: 15, high: 10, low: 45, color: '#ef4444' }
+      ]
+    }
+  },
+  {
+    id: 'volume_price_divergence_top',
+    name: '高檔量價背離誘多頂 (Volume-Price Divergence Trap)',
+    category: 'multi',
+    sentiment: 'bearish',
+    signalStrength: 'extreme',
+    winRate: 87,
+    isTopFrequent: true,
+    locationType: '高檔末升段 / 假突破天花板',
+    entryRule: '持有者逢高果斷分批獲利了結，空手者嚴禁追價',
+    stopLossRule: '若收盤跌破前一根紅K低點無條件出清持股',
+    targetRule: '深幅拉回回測季線或前波大支撐平台',
+    chineseName: '量價背離假突破 / 誘多出貨頂',
+    summary: '股價創下波段新高，但成交量反而大幅萎縮，或者高檔爆出天量卻留長上影線收黑，形成明顯的量價背離。',
+    marketPsychology: '主力資金在高檔已缺乏接手意願或正暗中將籌碼出脫給追高散戶，多頭動能衰竭，即將迎來斷頭式暴跌！',
+    tradingRules: [
+      '創新高卻無量能支撐，為最經典的誘多警訊。',
+      '跌破 5 日均線應立即獲利出場避險。'
+    ],
+    svgConfig: {
+      type: 'multi',
+      bars: [
+        { open: 65, close: 30, high: 25, low: 70, color: '#ef4444' },
+        { open: 30, close: 45, high: 26, low: 48, color: '#10b981' },
+        { open: 35, close: 20, high: 12, low: 40, color: '#ef4444' }
+      ]
+    }
+  },
+  {
+    id: 'breakout_capital_defense',
+    name: '箱型真突破與3%保本戰法 (Breakout with 3% Defense)',
+    category: 'multi',
+    sentiment: 'bullish',
+    signalStrength: 'high',
+    winRate: 85,
+    isTopFrequent: true,
+    locationType: '長期整理箱型上緣頸線處',
+    entryRule: '帶量實體紅K突破箱型頸線天花板時追價進場',
+    stopLossRule: '嚴格以進場價下方 3% 或跌回箱型內部作為保本停損點',
+    targetRule: '箱型高度 1:1 垂直等距滿足點',
+    chineseName: '箱型真突破 / 3%保本防守法則',
+    summary: '股價在歷經 1~3 個月的箱型整理後，以一根大成交量的實體長紅K棒強勢站上箱頂頸線，確認多頭突破確立。',
+    marketPsychology: '箱型內的套牢籌碼全部被多頭主力一口吞下，主力願意在更高價位建倉，後市必有一段主升行情！',
+    tradingRules: [
+      '突破當日成交量必須放大至 20 日均量的 1.5 倍以上。',
+      '進場後嚴守 3% 保本停損防守原則，絕不凹單。'
+    ],
+    svgConfig: {
+      type: 'multi',
+      bars: [
+        { open: 55, close: 45, high: 40, low: 60, color: '#ef4444' },
+        { open: 45, close: 55, high: 42, low: 58, color: '#10b981' },
+        { open: 55, close: 46, high: 44, low: 58, color: '#ef4444' },
+        { open: 46, close: 15, high: 10, low: 50, color: '#ef4444' }
+      ]
+    }
   }
 ];
+

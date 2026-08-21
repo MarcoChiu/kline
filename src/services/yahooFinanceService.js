@@ -1,7 +1,8 @@
 const PROXIES = [
+  'LOCAL_VITE_PROXY', // 本地 Vite 代理優先
+  'https://api.allorigins.win/raw?url=',
   'https://api.codetabs.com/v1/proxy?quest=',
-  'https://corsproxy.io/?',
-  'https://api.allorigins.win/raw?url='
+  'https://corsproxy.io/?'
 ];
 
 /**
@@ -24,15 +25,24 @@ export async function fetchStockData(stockCode, days = 90) {
   let rawData = null;
   let finalSymbol = symbol;
 
-  // 嘗試不同的 CORS 代理直到成功
+  // 嘗試不同的代理直到成功
   for (const proxy of PROXIES) {
     let proxyFailed = false;
 
     for (const sym of symbolsToTry) {
       try {
-        const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?range=${range}&interval=${interval}`;
-        const url = `${proxy}${encodeURIComponent(targetUrl)}`;
-        const response = await fetch(url);
+        let url;
+        if (proxy === 'LOCAL_VITE_PROXY') {
+          url = `/api/yahoo-query/v8/finance/chart/${sym}?range=${range}&interval=${interval}`;
+        } else {
+          const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?range=${range}&interval=${interval}`;
+          url = `${proxy}${encodeURIComponent(targetUrl)}`;
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
         
         if (!response.ok) {
           if (response.status === 404) {
@@ -61,7 +71,6 @@ export async function fetchStockData(stockCode, days = 90) {
         finalSymbol = sym;
         break; // 成功找到資料，跳出 symbol 迴圈
       } catch (err) {
-        console.warn(`Fetch via ${proxy} for ${sym} failed:`, err.message);
         lastError = err;
         if (proxyFailed) break; // 若 Proxy 異常，跳出 symbol 迴圈換下一個 Proxy
       }
@@ -110,20 +119,42 @@ export async function fetchStockData(stockCode, days = 90) {
     });
   };
 
+  // 計算量均線 (MV，以張為單位)
+  const calculateMV = (data, period) => {
+    return data.map((item, index) => {
+      if (index < period - 1) return null;
+      const sum = data.slice(index - period + 1, index + 1).reduce((acc, curr) => acc + (curr.volume || 0), 0);
+      return Number((sum / period / 1000).toFixed(2));
+    });
+  };
+
   const ma5 = calculateMA(validData, 5);
   const ma10 = calculateMA(validData, 10);
   const ma20 = calculateMA(validData, 20);
   const ma60 = calculateMA(validData, 60);
+  const ma120 = calculateMA(validData, 120);
+  const ma240 = calculateMA(validData, 240);
 
-  const formattedData = validData.map((item, index) => ({
-    ...item,
-    ma5: ma5[index],
-    ma10: ma10[index],
-    ma20: ma20[index],
-    ma60: ma60[index]
-  }));
+  const mv5 = calculateMV(validData, 5);
+  const mv20 = calculateMV(validData, 20);
 
-  // 只回傳最近 `days` 天的數據以節省 token
+  const formattedData = validData.map((item, index) => {
+    const volumeLots = item.volume ? Math.round(item.volume / 1000) : 0;
+    return {
+      ...item,
+      volumeLots,
+      ma5: ma5[index],
+      ma10: ma10[index],
+      ma20: ma20[index],
+      ma60: ma60[index],
+      ma120: ma120[index],
+      ma240: ma240[index],
+      mv5: mv5[index],
+      mv20: mv20[index]
+    };
+  });
+
+  // 只回傳最近 `days` 天的數據以利前端圖表渲染與節省 token
   const recentData = formattedData.slice(-days);
   const latest = recentData[recentData.length - 1];
   const previous = recentData.length > 1 ? recentData[recentData.length - 2] : latest;
@@ -173,7 +204,13 @@ export async function fetchTaiwanFuturesQuote(displayName = '台指期近一 (�
 
   for (const proxy of PROXIES) {
     try {
-      const url = `${proxy}${encodeURIComponent(targetUrl)}`;
+      let url;
+      if (proxy === 'LOCAL_VITE_PROXY') {
+        url = '/api/yahoo-tw/_td-stock/api/resource/StockServices.stockList;symbols=%5B%22WTX%26%22%5D';
+      } else {
+        url = `${proxy}${encodeURIComponent(targetUrl)}`;
+      }
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
 
@@ -232,8 +269,14 @@ export async function fetchSingleQuote(symbol, displayName = null) {
 
   for (const proxy of PROXIES) {
     try {
-      const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}`;
-      const url = `${proxy}${encodeURIComponent(targetUrl)}`;
+      let url;
+      if (proxy === 'LOCAL_VITE_PROXY') {
+        url = `/api/yahoo-query/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}`;
+      } else {
+        const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}`;
+        url = `${proxy}${encodeURIComponent(targetUrl)}`;
+      }
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
 

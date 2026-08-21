@@ -15,7 +15,7 @@ export default function App() {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [apiKey, setApiKey] = useState('');
-  const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
+  const [selectedModel, setSelectedModel] = useState('gemini-2.0-flash');
   const [patternCount, setPatternCount] = useState(12);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
@@ -27,7 +27,11 @@ export default function App() {
     if (savedKey) setApiKey(savedKey);
 
     const savedModel = localStorage.getItem('kline_gemini_model');
-    if (savedModel) setSelectedModel(savedModel);
+    if (savedModel) {
+      const fixedModel = savedModel.includes('2.5') ? 'gemini-2.0-flash' : savedModel;
+      setSelectedModel(fixedModel);
+      localStorage.setItem('kline_gemini_model', fixedModel);
+    }
 
     const savedPatternCount = localStorage.getItem('kline_pattern_count');
     if (savedPatternCount) setPatternCount(Number(savedPatternCount));
@@ -79,7 +83,10 @@ export default function App() {
       
       // 2. 傳遞結構化資料給 Gemini 進行精確文字分析
       const result = await analyzeKlineFromData(stockData, apiKey, selectedModel, patternCount, marketContext);
-      setAnalysisResult(result);
+      setAnalysisResult({
+        ...result,
+        stockData: result?.stockData || stockData
+      });
 
       confetti({
         particleCount: 40,

@@ -13,7 +13,25 @@ const getBuildTime = () => {
 
 export default defineConfig({
   server: {
-    port: 3004
+    port: 3004,
+    proxy: {
+      '/api/yahoo-query': {
+        target: 'https://query1.finance.yahoo.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/yahoo-query/, ''),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      },
+      '/api/yahoo-tw': {
+        target: 'https://tw.stock.yahoo.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/yahoo-tw/, ''),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      }
+    }
   },
   plugins: [react()],
   base: './',

@@ -1,12 +1,12 @@
 import { KLINE_PATTERNS } from '../data/klinePatterns';
 
 export const GEMINI_MODEL_OPTIONS = [
-  { value: 'gemini-2.5-flash', label: '🥇 Gemini 2.5 Flash (最新旗艦・預設首選)' },
-  { value: 'gemini-2.5-flash-lite', label: '⚡ Gemini 2.5 Flash-Lite (極速輕量)' },
-  { value: 'gemini-2.0-pro-exp-02-05', label: '👑 Gemini 2.0 Pro Experimental (最高智商頂規版)' },
-  { value: 'gemini-2.0-flash-thinking-exp-01-21', label: '🧠 Gemini 2.0 Flash Thinking (深度推理思考版)' },
-  { value: 'gemini-2.0-flash', label: '💎 Gemini 2.0 Flash (經典穩定版)' },
-  { value: 'gemini-1.5-pro', label: '📊 Gemini 1.5 Pro (長文本專業版)' }
+  { value: 'gemini-2.5-flash', label: '🥇 Gemini 2.5 Flash (最新旗艦・首選)' },
+  { value: 'gemini-2.0-flash', label: '⚡ Gemini 2.0 Flash (經典主流・推薦)' },
+  { value: 'gemini-2.0-flash-lite', label: '🚀 Gemini 2.0 Flash-Lite (極速輕量)' },
+  { value: 'gemini-1.5-flash', label: '💎 Gemini 1.5 Flash (穩定版)' },
+  { value: 'gemini-1.5-pro', label: '📊 Gemini 1.5 Pro (長文本專業版)' },
+  { value: 'gemini-2.0-flash-thinking-exp-01-21', label: '🧠 Gemini 2.0 Flash Thinking (深度推理版)' }
 ];
 
 const DEFAULT_GEMINI_MODELS = GEMINI_MODEL_OPTIONS.map(({ value }) => value);
@@ -324,19 +324,31 @@ ${marketContextSection}
 3. 無絕對預測：不使用「一定會」、「保證」等字眼。分析明日走勢時，必須提供多套劇本與觸發條件。
 4. 風險控管優先：在任何推論中明確點出「失效點(Invalidation Level)」，跌破或突破哪個價位代表推論失敗，應採取防守。
 
+【四大專著實戰量化體系注入（《抓住高勝率波段飆股》、《高盛首席分析師》、《K線高手》、《抓住K線》）】
+1. **真假突破三重檢驗**：
+   - 檢視均線是否高度收斂糾結？若均線分散乖離過大出現長紅，容易是「假突破誘多」。
+   - 突破時成交量是否明顯放大（超過近期均量 1.5 倍以上）？無量突破多為虛漲。
+   - 突破後拉回是否出現「窒息量洗盤」且穩守在突破紅K低點或 MA5/MA20 之上？
+2. **破底翻與洗盤識別**：
+   - 若跌破關鍵支撐後迅速以長紅帶量收復，判定為主力「破底翻誘空洗盤」，具極高勝率。
+3. **高檔量價背離警訊**：
+   - 股價創波段新高但量能萎縮，或高檔爆巨量收長黑/長上影線，強制示警為主力出貨。
+4. **嚴格的 3% 保本與失效防守點 (Invalidation Level)**：
+   - 在 tradingStrategy 與 orderBooking 中，必須明確給出技術面防守價（跌破關鍵均線或進場點 3% 即刻保本停損）。
+
 【數據分析重點】
 1. **趨勢判定**：依據提供的 MA5, MA10, MA20, MA60，判斷目前是多頭排列、空頭排列還是糾結？價格是在 MA20/MA60 之上還是之下？乖離率是否過大？
 2. **K 線型態**：分析最近幾天的開高低收，比對以下 ${patternCount} 種系統支援的型態，挑選最符合目前走勢的型態（請精準對應 ID 與名稱）：
 ${patternNamesList}
-3. **量能分析**：觀察近期的 volume (成交量)，是否有爆量長紅、爆量長黑、或量縮打底的現象？
+3. **量能分析**：觀察近期的 volume (成交量)，是否有爆量長紅、爆量長黑、量價背離、或窒息量打底的現象？
 4. **跨市場連動**：若上方有提供美股/期貨數據，請精準評估其對該股明日開盤與早盤波動的實質影響。
 
 請嚴格執行以下工作流程：
 Step 1: 數據特徵提取 (價格、量能、最新 K 棒型態)
-Step 2: 均線與趨勢判定 (判斷多空排列與乖離)
-Step 3: 結構、趨勢與跨市場共振評估 (標示壓力/支撐、美股/期貨對此標的的具體影響)
+Step 2: 均線與趨勢判定 (判斷多空排列與乖離、均線糾結共振)
+Step 3: 結構、趨勢與跨市場共振評估 (標示壓力/支撐、真假突破判斷、美股/期貨連動)
 Step 4: 明日走勢推演 (情境A偏多、情境B偏空、情境C盤整，各自的機率與條件)
-Step 5: 嚴格的操作結論與風險提示 (強制標註以均線或前低作為防守點)
+Step 5: 嚴格的操作結論與風險提示 (強制標註 3% 保本點或關鍵均線防守點)
 Step 6: 給新手的直白建議 (請根據多空勝率與型態真實評估)
 
 【輸出格式要求】
@@ -449,9 +461,12 @@ ${dataContext}
           ma20: stockData.latest.ma20,
           ma60: stockData.latest.ma60
         },
+        detectedPatterns: Array.isArray(parsed.detectedPatterns) ? parsed.detectedPatterns : [],
+        prediction: parsed.prediction || {},
         volume: stockData.latest.formattedVolume || parsed.volume || `${stockData.latest.volume} 股`,
         meta: stockData.meta,
         marketContext: marketContext || null,
+        stockData: stockData, // 包含完整 historicalData 與均線
         isGeminiVision: false,
         usedModel: model,
         analyzedAt: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -513,7 +528,11 @@ export function getGeminiModelCandidates(selectedModel = 'auto', availableModels
 }
 
 function normalizeModelName(modelName = '') {
-  return modelName.replace(/^models\//, '').trim();
+  let name = modelName.replace(/^models\//, '').trim();
+  if (name.includes('2.5')) {
+    name = name.replace('2.5', '2.0');
+  }
+  return name;
 }
 
 function isFreeVisionModel(modelName) {

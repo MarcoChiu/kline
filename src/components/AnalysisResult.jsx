@@ -1,7 +1,8 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, Minus, Target, ShieldAlert, Cpu, Award, Zap, Compass, X, Shield, Globe, ExternalLink, Calendar, CheckCircle2, BookmarkCheck } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Target, ShieldAlert, Cpu, Award, Zap, Compass, X, Shield, Globe, ExternalLink, Calendar, CheckCircle2, BookmarkCheck, BarChart2 } from 'lucide-react';
 import { KLINE_PATTERNS } from '../data/klinePatterns';
 import { PatternSVG } from './PatternEncyclopedia';
+import YahooKlineCanvas from './YahooKlineCanvas';
 
 export default function AnalysisResult({ result, isAnalyzing, onSelectPatternView }) {
   const [isEditing, setIsEditing] = React.useState(false);
@@ -10,6 +11,56 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
   const [customPrice, setCustomPrice] = React.useState('');
   const [activeModalPattern, setActiveModalPattern] = React.useState(null);
   const [nightCatalyst, setNightCatalyst] = React.useState('neutral'); // 'neutral' | 'bullish' | 'bearish'
+
+  // 依據當前時間動態判定交易時態（必須在所有 early return 前調用）
+  const sessionInfo = React.useMemo(() => {
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const timeNum = hours * 100 + minutes;
+
+    if (timeNum >= 0 && timeNum < 830) {
+      return {
+        sessionType: 'pre_open_today',
+        timeLabel: '今日盤前',
+        bookingTitle: '今日盤前預約掛單建議',
+        bookingSubtitle: '00:00 ~ 08:30 券商支援開盤前預約掛單，8:30 正式送交易所試撮排隊',
+        forecastTitle: '今日多空概率 & 情境推演',
+        badgeColor: '#38bdf8',
+        isToday: true
+      };
+    } else if (timeNum >= 830 && timeNum < 900) {
+      return {
+        sessionType: 'pre_match_today',
+        timeLabel: '今日試撮中',
+        bookingTitle: '今日開盤試撮掛單建議',
+        bookingSubtitle: '08:30 ~ 09:00 交易所模擬撮合階段，掛單即時進場試撮排隊',
+        forecastTitle: '今日早盤多空概率 & 情境推演',
+        badgeColor: '#fbbf24',
+        isToday: true
+      };
+    } else if (timeNum >= 900 && timeNum < 1330) {
+      return {
+        sessionType: 'in_session_today',
+        timeLabel: '盤中交易中',
+        bookingTitle: '今日盤中關鍵掛單與防守建議',
+        bookingSubtitle: '09:00 ~ 13:30 盤中連續撮合交易，請依關鍵支撐/天花板價位委託',
+        forecastTitle: '今日盤中走勢推演 & 關鍵階梯',
+        badgeColor: '#10b981',
+        isToday: true
+      };
+    } else {
+      return {
+        sessionType: 'after_hours_next_day',
+        timeLabel: '明日早鳥',
+        bookingTitle: '明日早鳥預約掛單建議',
+        bookingSubtitle: '盤後 14:00 ~ 隔日 08:30 可預先於券商 App 掛上預約條件單／限價單',
+        forecastTitle: '明日多空概率 & 情境推演',
+        badgeColor: '#818cf8',
+        isToday: false
+      };
+    }
+  }, []);
 
   React.useEffect(() => {
     if (result) {
@@ -40,7 +91,17 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
 
   if (!result) return null;
 
-  const { priceChange, changePercent, movingAverages, detectedPatterns, prediction, volume, latestDate, isLocalAnalyzed, analyzedAt } = result;
+  const {
+    priceChange,
+    changePercent,
+    movingAverages = {},
+    detectedPatterns = [],
+    prediction = {},
+    volume,
+    latestDate,
+    isLocalAnalyzed,
+    analyzedAt
+  } = result;
   const displayName = customName || result.stockName;
   const displayCode = customCode || result.stockCode;
   const displayPrice = customPrice ? parseFloat(customPrice) : result.currentPrice;
@@ -205,7 +266,16 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
         </div>
       </div>
 
-      {/* 2. 跨市場聯動行情與共振分析板塊 */}
+      {/* 2. Yahoo 奇摩標準風格 K 線圖表與籌碼 K 線標註系統 */}
+      {result.stockData && result.stockData.historicalData && result.stockData.historicalData.length > 0 && (
+        <YahooKlineCanvas
+          stockData={result.stockData}
+          prediction={prediction}
+          detectedPatterns={detectedPatterns}
+        />
+      )}
+
+      {/* 3. 跨市場聯動行情與共振分析板塊 */}
       {((result.marketContext && ((result.marketContext.usMarkets && result.marketContext.usMarkets.length > 0) || (result.marketContext.futuresAndIndex && result.marketContext.futuresAndIndex.length > 0))) || prediction.marketContextImpact) && (
         <div className="glass-panel" style={{ padding: '20px', border: '1px solid rgba(56, 189, 248, 0.3)', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(12, 32, 54, 0.75) 100%)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
@@ -264,11 +334,16 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
               <BookmarkCheck size={20} />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#f8fafc', margin: 0 }}>
-                明日早鳥預約掛單建議
-              </h3>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
-                盤後 14:00 ~ 隔日 08:30 可預先於券商 App 掛上條件單／限價單
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#f8fafc', margin: 0 }}>
+                  {sessionInfo.bookingTitle}
+                </h3>
+                <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '4px', background: `${sessionInfo.badgeColor}20`, color: sessionInfo.badgeColor, border: `1px solid ${sessionInfo.badgeColor}40`, fontWeight: '600' }}>
+                  {sessionInfo.timeLabel}
+                </span>
+              </div>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+                {sessionInfo.bookingSubtitle}
               </p>
             </div>
           </div>
@@ -377,7 +452,7 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Compass size={18} color="#06b6d4" />
-              <span>明日多空概率 & 情境推演</span>
+              <span>{sessionInfo.forecastTitle}</span>
             </h3>
             <span style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '4px', background: 'rgba(6, 182, 212, 0.1)', color: '#06b6d4', border: '1px solid rgba(6, 182, 212, 0.3)' }}>
               AI 綜合評估
