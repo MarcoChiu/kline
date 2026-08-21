@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Bookmark, RefreshCw, Trash2, CheckCircle2, AlertTriangle, Target, TrendingUp, ShieldAlert, ArrowUpRight, ArrowDownRight, ExternalLink, Award } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Bookmark, RefreshCw, Trash2, ExternalLink, Award } from 'lucide-react';
 import { fetchStockData } from '../services/yahooFinanceService';
 
 /**
@@ -31,12 +31,12 @@ export default function TradePlanJournal({ onSelectStockToAnalyze }) {
   }, []);
 
   // 批次更新所有計畫的即時行情
-  const handleRefreshAll = async () => {
+  const handleRefreshAll = useCallback(async () => {
     if (plans.length === 0) return;
     setIsRefreshing(true);
 
     const uniqueCodes = Array.from(new Set(plans.map(p => p.stockCode).filter(c => c && c !== '0000')));
-    const priceMap = { ...livePrices };
+    const priceMap = {};
 
     for (const code of uniqueCodes) {
       try {
@@ -56,16 +56,16 @@ export default function TradePlanJournal({ onSelectStockToAnalyze }) {
       }
     }
 
-    setLivePrices(priceMap);
+    setLivePrices(prev => ({ ...prev, ...priceMap }));
     setIsRefreshing(false);
-  };
+  }, [plans]);
 
   // 初始載入時自動觸發一次現價更新
   useEffect(() => {
-    if (plans.length > 0 && Object.keys(livePrices).length === 0) {
+    if (plans.length > 0) {
       handleRefreshAll();
     }
-  }, [plans]);
+  }, [plans, handleRefreshAll]);
 
   // 更新計畫狀態
   const handleUpdateStatus = (planId, newStatus) => {

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Search, BookOpen, ChevronRight, Award, Zap, Shield, TrendingUp, Star, ArrowUpDown } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, BookOpen, Award, Zap, Shield, Star, ArrowUpDown } from 'lucide-react';
 import { KLINE_PATTERNS } from '../data/klinePatterns';
 
 /**
@@ -119,7 +119,7 @@ export function PatternSVG({ config, width = 90, height = 110 }) {
   return null;
 }
 
-export default function PatternEncyclopedia({ selectedPatternId, onSelectPattern, onLoadToSimulator }) {
+export default function PatternEncyclopedia({ onLoadToSimulator }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [scopeFilter, setScopeFilter] = useState('top12'); // 'top12' | 'all' | 'favorites'
   const [categoryFilter, setCategoryFilter] = useState('all'); // all | single | dual | multi

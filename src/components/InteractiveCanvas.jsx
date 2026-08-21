@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Info, Sparkles, X, Bot, BarChart2, Target, Flame, Droplets, Scale, TrendingUp, Cpu, Shield } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Trash2, Info, Sparkles, X, Bot, Target, TrendingUp, Cpu, Shield } from 'lucide-react';
 import { PatternSVG } from './PatternEncyclopedia';
-import { getPatternSimulatorCandles, KLINE_PATTERNS } from '../data/klinePatterns';
+import { getPatternSimulatorCandles } from '../data/klinePatterns';
 import { analyzeSimulatedCandles } from '../services/aiVisionService';
 
 // 8 大經典實戰劇本預設組合 (含量價配置)

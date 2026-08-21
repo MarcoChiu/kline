@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 import { Download, Layers } from 'lucide-react';
 import { KLINE_PATTERNS } from '../data/klinePatterns';
 
@@ -526,6 +526,7 @@ export default function YahooKlineCanvas({ stockData, stockName: propStockName, 
     const handleResize = () => renderChart();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historicalData, effectiveStockName, maVisible, showChipAnnotations, hoverIndex, prediction, detectedPatterns, isHoveringBadge]);
 
   // 滑鼠互動：計算游標所在 K 棒索引與氣泡懸浮偵測

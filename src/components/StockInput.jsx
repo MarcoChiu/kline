@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Sparkles, RefreshCw, BarChart2, Globe, Layers, Info } from 'lucide-react';
 
 export default function StockInput({ onStockSubmit, isAnalyzing }) {
@@ -24,7 +24,7 @@ export default function StockInput({ onStockSubmit, isAnalyzing }) {
   useEffect(() => {
     try {
       localStorage.setItem('kline_include_us', includeUS.toString());
-    } catch (e) {
+    } catch {
       // 忽略無效儲存
     }
   }, [includeUS]);
@@ -32,7 +32,7 @@ export default function StockInput({ onStockSubmit, isAnalyzing }) {
   useEffect(() => {
     try {
       localStorage.setItem('kline_include_futures', includeFutures.toString());
-    } catch (e) {
+    } catch {
       // 忽略無效儲存
     }
   }, [includeFutures]);

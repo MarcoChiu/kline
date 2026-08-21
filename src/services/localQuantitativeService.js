@@ -2,7 +2,6 @@
  * 本地純量化技術分析生成器 (Pure Local Quantitative Analysis Generator)
  * 當使用者未設定 Gemini API Key 或 API 限流時，即時由本地演算法生成客觀、精確的技術分析與量化回測數據。
  */
-import { KLINE_PATTERNS } from '../data/klinePatterns';
 
 /**
  * 輔助計算 K 棒實體與影線長度
@@ -32,7 +31,6 @@ function detectLatestPattern(historicalData) {
   const n = historicalData.length;
   const latest = historicalData[n - 1];
   const prev = n > 1 ? historicalData[n - 2] : latest;
-  const prev2 = n > 2 ? historicalData[n - 3] : prev;
 
   const currM = getCandleMetrics(latest);
   const prevM = getCandleMetrics(prev);
@@ -114,7 +112,7 @@ export function generateLocalQuantitativeAnalysis(stockData, marketContext = nul
     throw new Error('無效的股票行情數據');
   }
 
-  const { latest, historicalData = [], symbol, stockName, fullHistoricalData = [] } = stockData;
+  const { latest, historicalData = [], symbol, stockName } = stockData;
   const currentPrice = latest.close;
   const ma5 = latest.ma5 || currentPrice;
   const ma10 = latest.ma10 || currentPrice;

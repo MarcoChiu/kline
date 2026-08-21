@@ -1,6 +1,4 @@
-/* global __BUILD_TIME__ */
-import React from 'react';
-import { BookOpen, Key, Sparkles, TrendingUp, BarChart2, Bookmark } from 'lucide-react';
+import { BookOpen, Key, Sparkles, BarChart2, Bookmark } from 'lucide-react';
 
 export default function Header({ activeTab, setActiveTab, hasApiKey, onOpenApiKeyModal }) {
   const buildTime = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'DEV';

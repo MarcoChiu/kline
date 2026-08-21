@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Calculator, ShieldCheck, DollarSign, Target, TrendingUp, BookmarkPlus, Check } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Calculator, BookmarkPlus, Check } from 'lucide-react';
 
 /**
  * 台股實戰部位風控與手續費計算器 (Position Sizing & Risk/Reward Calculator)
@@ -23,7 +23,7 @@ export default function PositionRiskCalculator({ stockCode, stockName, currentPr
   const [isSaved, setIsSaved] = useState(false);
 
   // 同步外部價格變動
-  React.useEffect(() => {
+  useEffect(() => {
     if (currentPrice) setEntryPrice(currentPrice);
     if (defaultStopLoss) setStopLossPrice(defaultStopLoss);
     if (defaultTarget) setTargetPrice(defaultTarget);

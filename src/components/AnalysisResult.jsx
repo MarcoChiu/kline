@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Minus, Target, ShieldAlert, Cpu, Award, Zap, Compass, X, Shield, Globe, BookmarkCheck, History, Sparkles } from 'lucide-react';
 import { KLINE_PATTERNS } from '../data/klinePatterns';
 import { PatternSVG } from './PatternEncyclopedia';
@@ -6,15 +6,15 @@ import YahooKlineCanvas from './YahooKlineCanvas';
 import PositionRiskCalculator from './PositionRiskCalculator';
 import { runPatternBacktest } from '../services/backtestService';
 
-export default function AnalysisResult({ result, isAnalyzing, onSelectPatternView, hasApiKey, onOpenApiKeyModal }) {
-  const [isEditing, setIsEditing] = React.useState(false);
-  const [customName, setCustomName] = React.useState('');
-  const [customCode, setCustomCode] = React.useState('');
-  const [customPrice, setCustomPrice] = React.useState('');
-  const [activeModalPattern, setActiveModalPattern] = React.useState(null);
+export default function AnalysisResult({ result, isAnalyzing, onOpenApiKeyModal }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [customName, setCustomName] = useState('');
+  const [customCode, setCustomCode] = useState('');
+  const [customPrice, setCustomPrice] = useState('');
+  const [activeModalPattern, setActiveModalPattern] = useState(null);
 
   // 依據當前時間動態判定交易時態（必須在所有 early return 前調用）
-  const sessionInfo = React.useMemo(() => {
+  const sessionInfo = useMemo(() => {
     const now = new Date();
     const hours = now.getHours();
     const minutes = now.getMinutes();
@@ -22,12 +22,6 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
 
     if (timeNum >= 0 && timeNum < 830) {
       return {
-        sessionType: 'pre_open_today',
-        timeLabel: '今日盤前',
-        bookingTitle: '今日盤前預約掛單建議',
-        bookingSubtitle: '00:00 ~ 08:30 券商支援開盤前預約掛單，8:30 正式送交易所試撮排隊',
-        forecastTitle: '今日多空概率 & 情境推演',
-        badgeColor: '#38bdf8',
         isToday: true
       };
     } else if (timeNum >= 830 && timeNum < 900) {
@@ -63,7 +57,7 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
     }
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (result) {
       setCustomName(result.stockName || '');
       setCustomCode(result.stockCode || '');
@@ -73,7 +67,7 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
   }, [result]);
 
   // 執行該檔個股本地真實歷史回測 (近 2 年 ~500 根) - 必須在所有 early return 前調用
-  const backtestResults = React.useMemo(() => {
+  const backtestResults = useMemo(() => {
     if (!result || !result.stockData) return null;
     const fullHistory = result.stockData.fullHistoricalData || result.stockData.historicalData || [];
     if (fullHistory.length === 0) return null;
@@ -114,7 +108,6 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
     prediction = {},
     volume,
     latestDate,
-    isLocalAnalyzed,
     analyzedAt
   } = result;
   const displayName = customName || result.stockName;
@@ -124,7 +117,6 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
   const numPercent = typeof changePercent === 'number' ? changePercent : (parseFloat(changePercent) || 0);
   const isDown = numChange < 0 || (numChange === 0 && numPercent < 0);
   const isFlat = numChange === 0 && numPercent === 0;
-  const isUp = !isDown && !isFlat;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', margin: '24px 0' }}>

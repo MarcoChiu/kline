@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Header from './components/Header';
 import StockInput from './components/StockInput';
 import AnalysisResult from './components/AnalysisResult';
@@ -165,7 +165,7 @@ export default function App() {
               isAnalyzing={isAnalyzing}
               hasApiKey={!!apiKey}
               onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
-              onSelectPatternView={(patternId) => {
+              onSelectPatternView={() => {
                 setActiveTab('encyclopedia');
               }}
             />

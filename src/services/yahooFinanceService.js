@@ -55,7 +55,7 @@ export async function fetchStockData(stockCode, days = 90) {
         let data;
         try {
           data = await response.json();
-        } catch (e) {
+        } catch {
           proxyFailed = true;
           throw new Error('Proxy 回傳非 JSON 格式');
         }
@@ -253,7 +253,7 @@ export async function fetchTaiwanFuturesQuote(displayName = '台指期近一 (�
           changePercent: Number(changePercent.toFixed(2))
         };
       }
-    } catch (err) {
+    } catch {
       // 嘗試下一個代理
     }
   }
@@ -314,7 +314,7 @@ export async function fetchSingleQuote(symbol, displayName = null) {
         priceChange,
         changePercent
       };
-    } catch (err) {
+    } catch {
       // 靜默嘗試下一個 Proxy
     }
   }

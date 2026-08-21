@@ -65,7 +65,7 @@ ${candles.map((c, i) => {
   ]
 }`;
 
-  const resolvedModel = resolveModelCandidate(selectedModel);
+  const resolvedModel = normalizeModelName(selectedModel);
   const modelsToTry = [resolvedModel, 'gemini-2.5-flash', 'gemini-2.0-flash'].filter((m, i, arr) => arr.indexOf(m) === i);
 
   for (const model of modelsToTry) {
@@ -244,7 +244,7 @@ ${dataContext}
       let parsed;
       try {
         parsed = parseGeminiJson(rawText);
-      } catch (err) {
+      } catch {
         console.error('Gemini 輸出無法解析為 JSON:', rawText);
         lastError = new Error(`[${model}] 無法從回應中擷取 JSON 結構`);
         continue;
@@ -436,7 +436,7 @@ function parseGeminiJson(rawText) {
       if (character === '{') depth += 1;
       if (character === '}') depth -= 1;
       if (depth === 0) {
-        const candidate = normalizedText.slice(start, index + 1).replace(/,\s*([\}\]])/g, '$1');
+        const candidate = normalizedText.slice(start, index + 1).replace(/,\s*([}\]])/g, '$1');
         return JSON.parse(candidate);
       }
     }
