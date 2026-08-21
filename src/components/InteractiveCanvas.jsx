@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Info, Sparkles, X, Bot, BarChart2, Target, Flame, Droplets, Scale } from 'lucide-react';
+import { Plus, Trash2, Info, Sparkles, X, Bot, BarChart2, Target, Flame, Droplets, Scale, TrendingUp, Cpu, Shield } from 'lucide-react';
 import { PatternSVG } from './PatternEncyclopedia';
 import { getPatternSimulatorCandles, KLINE_PATTERNS } from '../data/klinePatterns';
 import { analyzeSimulatedCandles } from '../services/aiVisionService';

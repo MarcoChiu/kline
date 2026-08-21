@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Bookmark, RefreshCw, Trash2, CheckCircle2, AlertTriangle, Target, TrendingUp, ShieldAlert, ArrowUpRight, ArrowDownRight, ExternalLink } from 'lucide-react';
+import { Bookmark, RefreshCw, Trash2, CheckCircle2, AlertTriangle, Target, TrendingUp, ShieldAlert, ArrowUpRight, ArrowDownRight, ExternalLink, Award } from 'lucide-react';
 import { fetchStockData } from '../services/yahooFinanceService';
 
 /**
