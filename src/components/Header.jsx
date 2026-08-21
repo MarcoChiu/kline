@@ -1,4 +1,4 @@
-import { BookOpen, Key, Sparkles, BarChart2, Bookmark } from 'lucide-react';
+import { BookOpen, Key, Sparkles, BarChart2, Bookmark, TrendingUp } from 'lucide-react';
 
 export default function Header({ activeTab, setActiveTab, hasApiKey, onOpenApiKeyModal }) {
   const buildTime = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'DEV';
