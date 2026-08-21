@@ -18,7 +18,7 @@ export async function fetchStockData(stockCode, days = 90) {
     symbolsToTry = [`${symbol}.TW`, `${symbol}.TWO`];
   }
 
-  const range = '6mo'; // 抓取半年資料以利計算 MA60
+  const range = '2y'; // 抓取 2 年資料 (~500 根 K 棒) 以利精準計算 MA120/MA240 及執行本地量化回測
   const interval = '1d';
 
   let lastError = null;
@@ -93,15 +93,19 @@ export async function fetchStockData(stockCode, days = 90) {
 
   const validData = [];
   for (let i = 0; i < timestamps.length; i++) {
-    // 濾除無效空數據
-    if (closes[i] !== null && closes[i] !== undefined) {
+    const c = closes[i];
+    if (typeof c === 'number' && !isNaN(c)) {
+      const o = typeof opens[i] === 'number' && !isNaN(opens[i]) ? opens[i] : c;
+      const h = typeof highs[i] === 'number' && !isNaN(highs[i]) ? highs[i] : Math.max(o, c);
+      const l = typeof lows[i] === 'number' && !isNaN(lows[i]) ? lows[i] : Math.min(o, c);
+      const v = typeof volumes[i] === 'number' && !isNaN(volumes[i]) ? volumes[i] : 0;
       validData.push({
         date: new Date(timestamps[i] * 1000).toISOString().split('T')[0],
-        open: opens[i],
-        high: highs[i],
-        low: lows[i],
-        close: closes[i],
-        volume: volumes[i]
+        open: Number(o.toFixed(2)),
+        high: Number(h.toFixed(2)),
+        low: Number(l.toFixed(2)),
+        close: Number(c.toFixed(2)),
+        volume: v
       });
     }
   }
@@ -179,20 +183,23 @@ export async function fetchStockData(stockCode, days = 90) {
     },
     latest: {
       date: latest.date,
-      open: Number(latest.open.toFixed(2)),
-      high: Number(latest.high.toFixed(2)),
-      low: Number(latest.low.toFixed(2)),
-      close: Number(latest.close.toFixed(2)),
-      volume: latest.volume,
+      open: typeof latest.open === 'number' ? Number(latest.open.toFixed(2)) : (latest.close || 0),
+      high: typeof latest.high === 'number' ? Number(latest.high.toFixed(2)) : (latest.close || 0),
+      low: typeof latest.low === 'number' ? Number(latest.low.toFixed(2)) : (latest.close || 0),
+      close: typeof latest.close === 'number' ? Number(latest.close.toFixed(2)) : 0,
+      volume: latest.volume || 0,
       formattedVolume,
-      priceChange,
-      changePercent,
+      priceChange: typeof priceChange === 'number' && !isNaN(priceChange) ? priceChange : 0,
+      changePercent: typeof changePercent === 'number' && !isNaN(changePercent) ? changePercent : 0,
       ma5: latest.ma5,
       ma10: latest.ma10,
       ma20: latest.ma20,
-      ma60: latest.ma60
+      ma60: latest.ma60,
+      ma120: latest.ma120,
+      ma240: latest.ma240
     },
-    historicalData: recentData
+    historicalData: recentData,
+    fullHistoricalData: formattedData
   };
 }
 

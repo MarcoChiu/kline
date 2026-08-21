@@ -2,16 +2,18 @@ import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import StockInput from './components/StockInput';
 import AnalysisResult from './components/AnalysisResult';
+import TradePlanJournal from './components/TradePlanJournal';
 import PatternEncyclopedia from './components/PatternEncyclopedia';
 import InteractiveCanvas from './components/InteractiveCanvas';
 import ApiKeyModal from './components/ApiKeyModal';
 import BackToTop from './components/BackToTop';
 import { analyzeKlineFromData } from './services/aiVisionService';
+import { generateLocalQuantitativeAnalysis } from './services/localQuantitativeService';
 import { fetchStockData, fetchMarketContextData } from './services/yahooFinanceService';
 import confetti from 'canvas-confetti';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('analyzer'); // 'analyzer' | 'encyclopedia' | 'simulator'
+  const [activeTab, setActiveTab] = useState('analyzer'); // 'analyzer' | 'plans' | 'encyclopedia' | 'simulator'
   const [analysisResult, setAnalysisResult] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [apiKey, setApiKey] = useState('');
@@ -62,31 +64,58 @@ export default function App() {
     setActiveTab('simulator');
   };
 
-  // 選擇股號並自動獲取數據分析
+  // 選擇股號並自動獲取數據分析 (支援免 Key 純量化模式與 AI 深度推演)
   const handleStockSubmit = async (stockCode, options = { includeUS: true, includeFutures: true }) => {
-    if (!apiKey || apiKey.trim().length < 10) {
-      setActiveTab('analyzer');
-      setIsApiKeyModalOpen(true);
-      return;
-    }
-
     setIsAnalyzing(true);
     setAnalysisResult(null);
     setActiveTab('analyzer');
 
     try {
-      // 1. 並行抓取個股歷史 K 線與跨市場數據 (美股/期指)
+      // 1. 抓取個股 2 年歷史 K 線與跨市場數據
       const [stockData, marketContext] = await Promise.all([
         fetchStockData(stockCode),
         fetchMarketContextData(options)
       ]);
       
-      // 2. 傳遞結構化資料給 Gemini 進行精確文字分析
-      const result = await analyzeKlineFromData(stockData, apiKey, selectedModel, patternCount, marketContext);
+      let result = null;
+
+      // 2. 若有設定有效 Gemini Key，嘗試執行 AI 深度推演
+      if (apiKey && apiKey.trim().length >= 10) {
+        try {
+          result = await analyzeKlineFromData(stockData, apiKey, selectedModel, patternCount, marketContext);
+        } catch (aiErr) {
+          console.warn('Gemini AI 分析失敗，自動降級為本地純量化分析模式:', aiErr);
+          result = generateLocalQuantitativeAnalysis(stockData, marketContext);
+        }
+      } else {
+        // 免 Key 模式：直接以本地確定性量化引擎生成
+        result = generateLocalQuantitativeAnalysis(stockData, marketContext);
+      }
+
       setAnalysisResult({
         ...result,
         stockData: result?.stockData || stockData
       });
+
+      // 自動記錄至 AI 預測成效歷史快照 (LocalStorage)
+      try {
+        const existingLogs = JSON.parse(localStorage.getItem('kline_prediction_history') || '[]');
+        const isBull = (result?.prediction?.bullishProbability ?? 50) >= (result?.prediction?.bearishProbability ?? 50);
+        const newLog = {
+          id: `pred_${Date.now()}`,
+          date: new Date().toISOString(),
+          stockCode: result?.stockCode || stockCode,
+          stockName: result?.stockName || stockData?.stockName,
+          sentiment: isBull ? 'bullish' : 'bearish',
+          probability: isBull ? result?.prediction?.bullishProbability : result?.prediction?.bearishProbability,
+          initialPrice: result?.closePrice || result?.currentPrice || stockData?.latest?.close,
+          patternName: result?.detectedPatterns?.[0]?.name || '形態分析'
+        };
+        existingLogs.unshift(newLog);
+        localStorage.setItem('kline_prediction_history', JSON.stringify(existingLogs.slice(0, 100)));
+      } catch (e) {
+        console.warn('儲存預測快照失敗:', e);
+      }
 
       confetti({
         particleCount: 40,
@@ -128,11 +157,21 @@ export default function App() {
             <AnalysisResult
               result={analysisResult}
               isAnalyzing={isAnalyzing}
+              hasApiKey={!!apiKey}
+              onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
               onSelectPatternView={(patternId) => {
                 setActiveTab('encyclopedia');
               }}
             />
           </div>
+        )}
+
+        {activeTab === 'plans' && (
+          <TradePlanJournal
+            onSelectStockToAnalyze={(stockCode) => {
+              handleStockSubmit(stockCode);
+            }}
+          />
         )}
 
         {activeTab === 'encyclopedia' && (

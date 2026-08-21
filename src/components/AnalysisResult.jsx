@@ -1,10 +1,12 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, Minus, Target, ShieldAlert, Cpu, Award, Zap, Compass, X, Shield, Globe, ExternalLink, Calendar, CheckCircle2, BookmarkCheck, BarChart2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Target, ShieldAlert, Cpu, Award, Zap, Compass, X, Shield, Globe, ExternalLink, Calendar, CheckCircle2, BookmarkCheck, BarChart2, History, Calculator, Sparkles } from 'lucide-react';
 import { KLINE_PATTERNS } from '../data/klinePatterns';
 import { PatternSVG } from './PatternEncyclopedia';
 import YahooKlineCanvas from './YahooKlineCanvas';
+import PositionRiskCalculator from './PositionRiskCalculator';
+import { runPatternBacktest } from '../services/backtestService';
 
-export default function AnalysisResult({ result, isAnalyzing, onSelectPatternView }) {
+export default function AnalysisResult({ result, isAnalyzing, onSelectPatternView, hasApiKey, onOpenApiKeyModal }) {
   const [isEditing, setIsEditing] = React.useState(false);
   const [customName, setCustomName] = React.useState('');
   const [customCode, setCustomCode] = React.useState('');
@@ -71,6 +73,20 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
     }
   }, [result]);
 
+  // 執行該檔個股本地真實歷史回測 (近 2 年 ~500 根) - 必須在所有 early return 前調用
+  const backtestResults = React.useMemo(() => {
+    if (!result || !result.stockData) return null;
+    const fullHistory = result.stockData.fullHistoricalData || result.stockData.historicalData || [];
+    if (fullHistory.length === 0) return null;
+
+    const targetPattern = result.detectedPatterns?.[0];
+    const patternId = targetPattern?.patternId || 'big_bull';
+    const patternName = targetPattern?.name || '大陽線';
+    const isBullish = (result.prediction?.bullishProbability ?? 50) >= (result.prediction?.bearishProbability ?? 50);
+
+    return runPatternBacktest(fullHistory, patternId, patternName, isBullish ? 'bullish' : 'bearish');
+  }, [result]);
+
   if (isAnalyzing) {
     return (
       <div className="glass-panel" style={{ padding: '60px 20px', textAlign: 'center', margin: '24px 0' }}>
@@ -114,6 +130,32 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', margin: '24px 0' }}>
       
+      {/* 0. 分析模式狀態提示橫幅 (純量化技術分析 vs Gemini AI 深度推演) */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 18px', borderRadius: '10px', background: result.isLocalAnalyzed ? 'rgba(59, 130, 246, 0.08)' : 'rgba(139, 92, 246, 0.1)', border: `1px solid ${result.isLocalAnalyzed ? 'rgba(59, 130, 246, 0.3)' : 'rgba(139, 92, 246, 0.35)'}`, flexWrap: 'wrap', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {result.isLocalAnalyzed ? <Zap size={18} color="#60a5fa" /> : <Sparkles size={18} color="#c084fc" />}
+          <div>
+            <div style={{ fontSize: '0.9rem', fontWeight: '800', color: '#ffffff' }}>
+              {result.isLocalAnalyzed ? '⚡ 本地純量化技術分析模式 (免費無限制秒查)' : '✨ Gemini AI 深度量化推演模式 (已啟用雲端大模型)'}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              {result.isLocalAnalyzed ? '已完成 2 年 K 棒掃描、MA 均線排列、確定性形態辨識、歷史勝率回測與部位風控精算。' : '結合主力籌碼物理學、夜盤跨市場共振及多套隔日多空應對情境推演。'}
+            </div>
+          </div>
+        </div>
+
+        {result.isLocalAnalyzed && onOpenApiKeyModal && (
+          <button
+            onClick={onOpenApiKeyModal}
+            className="btn-primary"
+            style={{ fontSize: '0.78rem', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Sparkles size={13} />
+            <span>配置 Key 解鎖 AI 深度解讀</span>
+          </button>
+        )}
+      </div>
+
       {/* 1. 股票基本行情與均線總覽橫幅 */}
       <div className="glass-panel" style={{ padding: '20px 24px', background: 'linear-gradient(135deg, rgba(26, 34, 52, 0.8) 0%, rgba(18, 24, 36, 0.9) 100%)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
@@ -619,7 +661,97 @@ export default function AnalysisResult({ result, isAnalyzing, onSelectPatternVie
         </div>
       )}
 
-      {/* 4. 點擊形態彈出的百科詳解 Modal (不切換頁面) */}
+      {/* 5. 本地真實歷史回測數據報告 (Quantitative Backtest Report) */}
+      {backtestResults && backtestResults.sampleCount > 0 && (
+        <div className="glass-panel" style={{ padding: '22px', border: '1px solid rgba(139, 92, 246, 0.35)', background: 'linear-gradient(135deg, rgba(20, 16, 38, 0.9) 0%, rgba(15, 23, 42, 0.85) 100%)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ padding: '6px', borderRadius: '8px', background: 'rgba(139, 92, 246, 0.2)', color: '#a78bfa' }}>
+                <History size={20} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#f8fafc', margin: 0 }}>
+                  【{displayName}】歷史真實回測報告：{detectedPatterns?.[0]?.name || '當前形態'}
+                </h3>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+                  回溯該檔個股過去 2 年共 {backtestResults.totalBarsAnalyzed} 根日 K 棒，逐筆檢驗訊號觸發後的實際持有報酬率
+                </p>
+              </div>
+            </div>
+
+            <span style={{ fontSize: '0.78rem', padding: '4px 10px', borderRadius: '20px', background: 'rgba(139, 92, 246, 0.2)', color: '#c4b5fd', border: '1px solid rgba(139, 92, 246, 0.4)', fontWeight: '700' }}>
+              歷史共出現 {backtestResults.sampleCount} 次有效樣本
+            </span>
+          </div>
+
+          {/* 1日/3日/5日/10日 回測數據卡片 */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '14px' }}>
+            {[
+              { label: '持有 1 日 (T+1)', key: '1D' },
+              { label: '持有 3 日 (T+3)', key: '3D' },
+              { label: '持有 5 日 (T+5)', key: '5D' },
+              { label: '持有 10 日 (T+10)', key: '10D' }
+            ].map(({ label, key }) => {
+              const stat = backtestResults.periods[key];
+              if (!stat) return null;
+              const isWinGood = stat.winRate >= 60;
+              const isWinMid = stat.winRate >= 50 && stat.winRate < 60;
+
+              return (
+                <div
+                  key={key}
+                  style={{
+                    background: 'rgba(0, 0, 0, 0.35)',
+                    padding: '12px',
+                    borderRadius: '10px',
+                    border: `1px solid ${isWinGood ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-subtle)'}`,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <div style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: '600', marginBottom: '4px' }}>
+                    {label}
+                  </div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '900', color: isWinGood ? '#34d399' : isWinMid ? '#fbbf24' : '#f87171' }}>
+                    {stat.winRate}% <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: '500' }}>勝率</span>
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: stat.avgReturn >= 0 ? '#6ee7b7' : '#fca5a5', marginTop: '4px', fontWeight: '600' }}>
+                    平均報酬: {stat.avgReturn >= 0 ? `+${stat.avgReturn}%` : `${stat.avgReturn}%`}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>
+                    盈虧比: {stat.profitFactor} ({stat.wins}勝 {stat.losses}敗)
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 最近出現歷史日期 */}
+          {backtestResults.recentOccurrenceDates?.length > 0 && (
+            <div style={{ fontSize: '0.76rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ color: '#cbd5e1' }}>📅 最近觸發日期：</span>
+              {backtestResults.recentOccurrenceDates.map((dateStr, dIdx) => (
+                <span key={dIdx} style={{ padding: '1px 6px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', border: '1px solid var(--border-subtle)' }}>
+                  {dateStr}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 6. 實戰部位大小與台股風控計算器 */}
+      <PositionRiskCalculator
+        stockCode={displayCode}
+        stockName={displayName}
+        currentPrice={displayPrice}
+        defaultStopLoss={prediction.orderBooking?.stopLossLimit || (prediction.supportLevels && prediction.supportLevels[0])}
+        defaultTarget={prediction.orderBooking?.entryLimit || (prediction.resistanceLevels && prediction.resistanceLevels[0])}
+        detectedPatternName={detectedPatterns?.[0]?.name}
+      />
+
+      {/* 7. 點擊形態彈出的百科詳解 Modal (不切換頁面) */}
       {activeModalPattern && (
         <div
           onClick={() => setActiveModalPattern(null)}
