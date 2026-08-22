@@ -31,14 +31,14 @@ export const KLINE_PATTERNS = [
     winRate: 82,
     isTopFrequent: true,
     locationType: '突破平台 / 主升起漲段',
-    entryRule: '突破長期整理箱型或帶量開高時直接追價進場',
-    stopLossRule: '跌破長紅實體 1/2 處或開盤最低點立刻停損',
+    entryRule: '突破長期整理箱型且放量時順勢觀察進場',
+    stopLossRule: '跌破長紅實體 1/2 處或開盤最低點嚴格停損',
     targetRule: '測量整理平台之 1:1 等距等長波段滿足點',
     chineseName: '大陽線 / 光頭光腳長紅',
-    summary: '一根實心飽滿的大紅柱，幾乎沒有上下引線。代表買家從開盤一路爆買到收盤，氣勢完全碾壓空軍！',
-    marketPsychology: '多頭部隊傾巢而出，市場搶購氣氛熱烈，空軍毫無招架之力，通常是行情發動或加速突破的強烈訊號！',
+    summary: '一根實心飽滿的大紅柱，幾乎沒有上下引線。代表買方從開盤至收盤展現強勁買盤，多方力道強烈。',
+    marketPsychology: '多頭動能集結，市場買盤積極推升，通常是行情發動或箱型突破的技術訊號。',
     tradingRules: [
-      '突破長期整理區時出現，為絕佳追價做多點。',
+      '突破長期整理區時出現，為多頭動能延續之關鍵觀察點。',
       '將當日長紅實體的 1/2 或最低點設為防守停損點。'
     ],
     svgConfig: { type: 'single', open: 80, close: 20, high: 15, low: 85, color: '#ef4444' }
@@ -51,16 +51,16 @@ export const KLINE_PATTERNS = [
     signalStrength: 'high',
     winRate: 83,
     isTopFrequent: true,
-    locationType: '高檔做頭 / 破線逃命段',
-    entryRule: '跌破關鍵均線或支撐應立即出清多單避險',
+    locationType: '高檔頭部型態 / 破線修正段',
+    entryRule: '跌破關鍵均線或支撐應執行停損或減碼避險',
     stopLossRule: '若收盤重新站回長黑頂部則空單停損',
     targetRule: '向下尋找前波歷史低點或長期均線防守',
     chineseName: '大陰線 / 長黑摜壓',
-    summary: '一根超大根的綠色實體柱，從頭跌到尾。代表主力大戶不計成本瘋狂拋售，多頭被一網打盡。',
-    marketPsychology: '市場湧現恐慌性賣壓，買盤徹底崩潰，多方全面棄守，接下來極可能展開連續修正。',
+    summary: '一根較長之綠色實體柱，收盤顯著低於開盤。代表賣壓沈重且買盤棄守，短線轉弱。',
+    marketPsychology: '市場湧現獲利調節或停損賣壓，多方承接意願薄弱，後續需提防連續整理或修正。',
     tradingRules: [
-      '跌破均線或支撐時出現，應立即停損或出清多單保命。',
-      '千萬不要急於接刀抄底，等待止跌訊號再行動。'
+      '跌破均線或支撐時出現，應嚴格執行停損或減碼部位避險。',
+      '切勿急於盲目接刀抄底，耐心等待落底止跌訊號。'
     ],
     svgConfig: { type: 'single', open: 20, close: 80, high: 15, low: 85, color: '#10b981' }
   },
@@ -72,16 +72,16 @@ export const KLINE_PATTERNS = [
     signalStrength: 'high',
     winRate: 76,
     isTopFrequent: true,
-    locationType: '連續重挫 / 底部止跌段',
-    entryRule: '隔日開高或收紅確認止跌時進場試單',
+    locationType: '連續修正 / 底部止跌觀察段',
+    entryRule: '隔日開高或收紅確認止跌時分批進場試單',
     stopLossRule: '跌破槌子線長下影線最低點立刻停損',
     targetRule: '挑戰上方第一道下彎均線 (MA5/MA10)',
     chineseName: '槌子線 / 低檔探底神針',
-    summary: '實體短短在頂部，下方拖著超過身體兩倍長的長下影線，出現在連續下跌後的低檔區。',
-    marketPsychology: '空方盤中極力摜壓，但低檔爆發神祕強大買盤強行收復失土，代表空頭力竭、多方開始奪回主導權！',
+    summary: '實體短短在頂部，下方拖著超過身體兩倍長之長下影線，出現在連續下跌後的低檔區。',
+    marketPsychology: '空方盤中極力摜壓，但低檔浮現承接買盤收復失土，代表空方力道衰減、多方開始試圖防守。',
     tradingRules: [
-      '隔日開高或確認收紅即可進場試單做多。',
-      '以槌子線的最低下影線作為極低風險的停損點。'
+      '隔日開高或確認收紅可觀察進場試單做多。',
+      '以槌子線的最低下影線作為嚴格停損防守點。'
     ],
     svgConfig: { type: 'single', open: 25, close: 20, high: 18, low: 85, color: '#ef4444' }
   },
@@ -94,7 +94,7 @@ export const KLINE_PATTERNS = [
     winRate: 73,
     isTopFrequent: true,
     locationType: '連續大漲 / 高檔力竭段',
-    entryRule: '隔日開低或跌破實體時全面停利賣出',
+    entryRule: '隔日開低或跌破實體時分批停利或減碼',
     stopLossRule: '突破吊人線當日最高點則停損',
     targetRule: '回測下方月線 (MA20) 或起漲平台',
     chineseName: '吊人線 / 高檔吊頸線',

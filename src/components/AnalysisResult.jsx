@@ -14,15 +14,31 @@ export default function AnalysisResult({ result, isAnalyzing, onOpenApiKeyModal 
   const [customPrice, setCustomPrice] = useState('');
   const [activeModalPattern, setActiveModalPattern] = useState(null);
 
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+
+  // 每分鐘動態刷新時態判定
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
+
   // 依據當前時間動態判定交易時態（必須在所有 early return 前調用）
   const sessionInfo = useMemo(() => {
-    const now = new Date();
+    const now = currentTime;
     const hours = now.getHours();
     const minutes = now.getMinutes();
     const timeNum = hours * 100 + minutes;
 
     if (timeNum >= 0 && timeNum < 830) {
       return {
+        sessionType: 'pre_market_early',
+        timeLabel: '早盤前準備',
+        bookingTitle: '今日開盤前預約掛單建議',
+        bookingSubtitle: '00:00 ~ 08:30 盤前時段，預先設定今日限價委託與風控防守價',
+        forecastTitle: '今日開盤多空偏向 & 情境推演',
+        badgeColor: '#60a5fa',
         isToday: true
       };
     } else if (timeNum >= 830 && timeNum < 900) {
@@ -56,7 +72,7 @@ export default function AnalysisResult({ result, isAnalyzing, onOpenApiKeyModal 
         isToday: false
       };
     }
-  }, []);
+  }, [currentTime]);
 
   useEffect(() => {
     if (result) {
@@ -147,6 +163,160 @@ export default function AnalysisResult({ result, isAnalyzing, onOpenApiKeyModal 
           </button>
         )}
       </div>
+
+      {/* 0.5 資料品質與時效狀態標籤群 (Data Quality & Integrity Badges) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: '8px' }}>
+        <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '1rem' }}>📅</span>
+          <div>
+            <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>個股報價基準</div>
+            <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#f8fafc' }}>
+              {latestDate || result.latestDate || '最新收盤'}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '1rem' }}>📊</span>
+          <div>
+            <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>歷史日 K 樣本</div>
+            <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#60a5fa' }}>
+              {result.stockData?.fullHistoricalData?.length || result.stockData?.historicalData?.length || 500} 根 (~2年完整)
+            </div>
+          </div>
+        </div>
+
+        <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '1rem' }}>🌐</span>
+          <div>
+            <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>跨市場共振連線</div>
+            <div style={{ fontSize: '0.8rem', fontWeight: '700', color: result.marketContext ? '#34d399' : '#94a3b8' }}>
+              {result.marketContext ? '台指/美股已同步' : '單一標的模式'}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '1rem' }}>🛡️</span>
+          <div>
+            <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>分析引擎與時效</div>
+            <div style={{ fontSize: '0.8rem', fontWeight: '700', color: result.isLocalAnalyzed ? '#38bdf8' : '#c084fc' }}>
+              {result.isLocalAnalyzed ? '本地量化純規則' : 'Gemini AI 雲端'} ({analyzedAt ? new Date(analyzedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '最新'})
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 0.6 第一層與第二層：核心結論、唯一失效防守點與三個決策數字 (Executive Takeaway & Decision Matrix) */}
+      {(() => {
+        const bullProb = prediction.bullishProbability ?? 50;
+        const bearProb = prediction.bearishProbability ?? 30;
+        const neutralProb = prediction.neutralProbability ?? 20;
+
+        const direction = (neutralProb > bullProb && neutralProb > bearProb)
+          ? 'neutral'
+          : (bearProb > bullProb)
+          ? 'bearish'
+          : 'bullish';
+
+        const isBull = direction === 'bullish';
+        const isBear = direction === 'bearish';
+        const isNeutral = direction === 'neutral';
+
+        const sup1 = prediction.supportLevels?.[0] || movingAverages?.ma20 || (displayPrice ? (displayPrice * 0.98).toFixed(2) : '--');
+        const res1 = prediction.resistanceLevels?.[0] || (displayPrice ? (displayPrice * 1.02).toFixed(2) : '--');
+
+        const invalidationPrice = isBull
+          ? (prediction.orderBooking?.stopLossLimit || prediction.supportLevels?.[1] || prediction.supportLevels?.[0] || movingAverages?.ma20 || (displayPrice ? (displayPrice * 0.95).toFixed(2) : '--'))
+          : isBear
+          ? (prediction.orderBooking?.takeProfitLimit || prediction.resistanceLevels?.[0] || movingAverages?.ma5 || (displayPrice ? (displayPrice * 1.05).toFixed(2) : '--'))
+          : sup1;
+
+        const stat3D = backtestResults?.periods?.['3D'];
+
+        return (
+          <div className="glass-panel" style={{
+            padding: '20px 24px',
+            border: `1px solid ${isBull ? 'rgba(239, 68, 68, 0.4)' : isBear ? 'rgba(16, 185, 129, 0.4)' : 'rgba(245, 158, 11, 0.4)'}`,
+            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%)'
+          }}>
+            {/* 第一層：核心方向與結論 */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <span style={{
+                    padding: '4px 12px',
+                    borderRadius: '6px',
+                    fontSize: '0.88rem',
+                    fontWeight: '800',
+                    color: '#fff',
+                    background: isBull ? '#ef4444' : isBear ? '#10b981' : '#f59e0b'
+                  }}>
+                    {isBull ? '🎯 綜合研判：偏多攻擊' : isBear ? '🛡️ 綜合研判：偏空防守' : '⚖️ 綜合研判：區間盤整'}
+                  </span>
+                  <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                    模型權重：多 {bullProb}% / 盤 {neutralProb}% / 空 {bearProb}%
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.92rem', color: '#f1f5f9', fontWeight: '600', margin: 0, lineHeight: '1.5' }}>
+                  {prediction.sentimentSummary || (isNeutral ? '價格處於均線夾層區間整理，等待放量突破確認方向。' : '均線排列整固中，關注關鍵壓力突破與支撐防守力道。')}
+                </p>
+              </div>
+
+              {/* 核心失效點 (Invalidation Level) */}
+              <div style={{
+                background: isBull ? 'rgba(239, 68, 68, 0.12)' : isBear ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+                border: `1px solid ${isBull ? 'rgba(239, 68, 68, 0.35)' : isBear ? 'rgba(16, 185, 129, 0.35)' : 'rgba(245, 158, 11, 0.35)'}`,
+                padding: '10px 14px',
+                borderRadius: '8px',
+                minWidth: '220px'
+              }}>
+                <div style={{ fontSize: '0.74rem', color: isBull ? '#fca5a5' : isBear ? '#6ee7b7' : '#fcd34d', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <ShieldAlert size={14} /> 唯一核心失效點 (Invalidation Level)
+                </div>
+                <div className="font-mono" style={{ fontSize: '1.35rem', fontWeight: '900', color: isBull ? '#f87171' : isBear ? '#34d399' : '#fbbf24', marginTop: '2px' }}>
+                  {invalidationPrice} <span style={{ fontSize: '0.8rem', fontWeight: '500' }}>元</span>
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#cbd5e1', marginTop: '2px' }}>
+                  {isBull
+                    ? `若收盤跌破 ${invalidationPrice} 元，多方推論即刻失效，應果斷停損防守`
+                    : isBear
+                    ? `若收盤突破 ${invalidationPrice} 元，空方推論即刻失效，空單應離場觀望`
+                    : `在未跌破 ${sup1} 或突破 ${res1} 前，嚴守區間操作紀律`}
+                </div>
+              </div>
+            </div>
+
+            {/* 第二層：三個決策關鍵數字 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '10px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              {/* 決策 1: 趨勢動能 */}
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '10px 12px', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>① 均線趨勢動能</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#f8fafc', marginTop: '2px' }}>
+                  {displayPrice && movingAverages?.ma20 ? (displayPrice >= movingAverages.ma20 ? '站穩月線 (MA20 偏多)' : '跌破月線 (MA20 反壓)') : '區間整理'}
+                </div>
+              </div>
+
+              {/* 決策 2: 關鍵階梯 */}
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '10px 12px', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>② 關鍵支撐 ↔ 壓力</div>
+                <div className="font-mono" style={{ fontSize: '0.95rem', fontWeight: '800', color: '#fbbf24', marginTop: '2px' }}>
+                  {sup1} 元 ↔ {res1} 元
+                </div>
+              </div>
+
+              {/* 決策 3: 歷史回測可信度 */}
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '10px 12px', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>③ 3日回測勝率 (淨報酬)</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: '800', color: stat3D?.winRate >= 55 ? '#34d399' : '#94a3b8', marginTop: '2px' }}>
+                  {stat3D ? `${stat3D.winRate}% (樣本 ${stat3D.evaluatedCount || backtestResults.sampleCount} 筆)` : '回測運算中'}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        );
+      })()}
 
       {/* 1. 股票基本行情與均線總覽橫幅 */}
       <div className="glass-panel" style={{ padding: '20px 24px', background: 'linear-gradient(135deg, rgba(26, 34, 52, 0.8) 0%, rgba(18, 24, 36, 0.9) 100%)' }}>
@@ -460,14 +630,14 @@ export default function AnalysisResult({ result, isAnalyzing, onOpenApiKeyModal 
                     <ShieldAlert size={16} /> 🛡️ 破線停損出場價
                   </span>
                   <span style={{ fontSize: '0.72rem', background: 'rgba(245, 158, 11, 0.2)', color: '#fef3c7', padding: '2px 6px', borderRadius: '4px' }}>
-                    最後防線
+                    關鍵防守
                   </span>
                 </div>
                 <div className="font-mono" style={{ fontSize: '1.7rem', fontWeight: '800', color: '#fbbf24', marginBottom: '4px' }}>
                   {stopLossPrice} <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>元</span>
                 </div>
                 <p style={{ fontSize: '0.8rem', color: '#cbd5e1', margin: 0, lineHeight: '1.4' }}>
-                  {booking.stopLossNote || '跌破 MA20 月線或關鍵地板需無條件保命出場'}
+                  {booking.stopLossNote || '跌破 MA20 月線或關鍵支撐需嚴格執行停損防守'}
                 </p>
               </div>
 
@@ -660,7 +830,7 @@ export default function AnalysisResult({ result, isAnalyzing, onOpenApiKeyModal 
       {/* 5. 本地真實歷史回測數據報告 (Quantitative Backtest Report) */}
       {backtestResults && backtestResults.sampleCount > 0 && (
         <div className="glass-panel" style={{ padding: '22px', border: '1px solid rgba(139, 92, 246, 0.35)', background: 'linear-gradient(135deg, rgba(20, 16, 38, 0.9) 0%, rgba(15, 23, 42, 0.85) 100%)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ padding: '6px', borderRadius: '8px', background: 'rgba(139, 92, 246, 0.2)', color: '#a78bfa' }}>
                 <History size={20} />
@@ -669,16 +839,30 @@ export default function AnalysisResult({ result, isAnalyzing, onOpenApiKeyModal 
                 <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#f8fafc', margin: 0 }}>
                   【{displayName}】歷史真實回測報告：{detectedPatterns?.[0]?.name || '當前形態'}
                 </h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
-                  回溯該檔個股過去 2 年共 {backtestResults.totalBarsAnalyzed} 根日 K 棒，逐筆檢驗訊號觸發後的實際持有報酬率
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+                  回溯該檔個股過去 2 年共 {backtestResults.totalBarsAnalyzed} 根日 K 棒｜進場設定：{backtestResults.executionModel || '次日開盤進場'} (已扣除台股摩擦成本 {backtestResults.frictionCostPercent ?? 0.585}%)
                 </p>
               </div>
             </div>
 
-            <span style={{ fontSize: '0.78rem', padding: '4px 10px', borderRadius: '20px', background: 'rgba(139, 92, 246, 0.2)', color: '#c4b5fd', border: '1px solid rgba(139, 92, 246, 0.4)', fontWeight: '700' }}>
-              歷史共出現 {backtestResults.sampleCount} 次有效樣本
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              {backtestResults.isLowSample && (
+                <span style={{ fontSize: '0.72rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(239, 68, 68, 0.15)', color: '#fca5a5', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                  ⚠️ 小樣本警示 (N &lt; 5)
+                </span>
+              )}
+              <span style={{ fontSize: '0.78rem', padding: '4px 10px', borderRadius: '20px', background: 'rgba(139, 92, 246, 0.2)', color: '#c4b5fd', border: '1px solid rgba(139, 92, 246, 0.4)', fontWeight: '700' }}>
+                有效樣本：{backtestResults.sampleCount} 次
+              </span>
+            </div>
           </div>
+
+          {/* 樣本數警示提示 */}
+          {backtestResults.warning && (
+            <div style={{ padding: '8px 12px', borderRadius: '6px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.25)', fontSize: '0.78rem', color: '#fcd34d', marginBottom: '12px' }}>
+              {backtestResults.warning}
+            </div>
+          )}
 
           {/* 1日/3日/5日/10日 回測數據卡片 */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(130px, 100%), 1fr))', gap: '10px', marginBottom: '14px' }}>
@@ -706,18 +890,24 @@ export default function AnalysisResult({ result, isAnalyzing, onOpenApiKeyModal 
                     justifyContent: 'space-between'
                   }}
                 >
-                  <div style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: '600', marginBottom: '4px' }}>
-                    {label}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: '600' }}>{label}</span>
+                    <span style={{ fontSize: '0.68rem', color: '#64748b' }}>有效 {stat.evaluatedCount} 筆</span>
                   </div>
                   <div style={{ fontSize: '1.25rem', fontWeight: '900', color: isWinGood ? '#34d399' : isWinMid ? '#fbbf24' : '#f87171' }}>
                     {stat.winRate}% <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: '500' }}>勝率</span>
                   </div>
                   <div style={{ fontSize: '0.75rem', color: stat.avgReturn >= 0 ? '#6ee7b7' : '#fca5a5', marginTop: '4px', fontWeight: '600' }}>
-                    平均報酬: {stat.avgReturn >= 0 ? `+${stat.avgReturn}%` : `${stat.avgReturn}%`}
+                    淨平均報酬: {stat.avgReturn >= 0 ? `+${stat.avgReturn}%` : `${stat.avgReturn}%`}
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>
                     盈虧比: {stat.profitFactor} ({stat.wins}勝 {stat.losses}敗)
                   </div>
+                  {stat.avgDrawdown !== undefined && (
+                    <div style={{ fontSize: '0.68rem', color: '#f87171', marginTop: '2px' }}>
+                      平均單筆不利波動 (MAE): {stat.avgDrawdown}%
+                    </div>
+                  )}
                 </div>
               );
             })}

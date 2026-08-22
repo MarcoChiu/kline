@@ -1,12 +1,12 @@
 import { KLINE_PATTERNS } from '../data/klinePatterns';
 
 export const GEMINI_MODEL_OPTIONS = [
-  { value: 'gemini-2.5-flash', label: '🥇 Gemini 2.5 Flash (最新旗艦・首選)' },
-  { value: 'gemini-2.0-flash', label: '⚡ Gemini 2.0 Flash (經典主流・推薦)' },
-  { value: 'gemini-2.0-flash-lite', label: '🚀 Gemini 2.0 Flash-Lite (極速輕量)' },
-  { value: 'gemini-1.5-flash', label: '💎 Gemini 1.5 Flash (穩定版)' },
-  { value: 'gemini-1.5-pro', label: '📊 Gemini 1.5 Pro (長文本專業版)' },
-  { value: 'gemini-2.0-flash-thinking-exp-01-21', label: '🧠 Gemini 2.0 Flash Thinking (深度推理版)' }
+  { value: 'gemini-2.5-flash', label: '🥇 Gemini 2.5 Flash (最新旗艦・首選)', desc: '次世代旗艦模型，具備優異推理與結構化分析能力' },
+  { value: 'gemini-2.0-flash', label: '⚡ Gemini 2.0 Flash (經典主流・推薦)', desc: '極速低延遲，兼顧精準度與回傳穩定性' },
+  { value: 'gemini-2.0-flash-lite', label: '🚀 Gemini 2.0 Flash-Lite (極速輕量)', desc: '輕量高通量架構，適合快速批次推演' },
+  { value: 'gemini-1.5-flash', label: '💎 Gemini 1.5 Flash (穩定版)', desc: '百萬 Token 超長上下文穩定基礎模型' },
+  { value: 'gemini-1.5-pro', label: '📊 Gemini 1.5 Pro (長文本專業版)', desc: '深層多輪複雜量化推演專用' },
+  { value: 'gemini-2.0-flash-thinking-exp-01-21', label: '🧠 Gemini 2.0 Flash Thinking (深度推理版)', desc: '具備思維鏈 (Chain-of-Thought) 強化推論' }
 ];
 
 const DEFAULT_GEMINI_MODELS = GEMINI_MODEL_OPTIONS.map(({ value }) => value);
@@ -250,40 +250,104 @@ ${dataContext}
         continue;
       }
 
-      return {
-        ...parsed,
-        stockName: parsed.stockName || stockData.stockName,
-        stockCode: stockData.symbol,
-        openPrice: stockData.latest.open,
-        highPrice: stockData.latest.high,
-        lowPrice: stockData.latest.low,
-        closePrice: stockData.latest.close,
-        currentPrice: stockData.latest.close,
-        priceChange: stockData.latest.priceChange,
-        changePercent: stockData.latest.changePercent,
-        latestDate: stockData.latest.date,
-        movingAverages: {
-          ma5: stockData.latest.ma5,
-          ma10: stockData.latest.ma10,
-          ma20: stockData.latest.ma20,
-          ma60: stockData.latest.ma60
-        },
-        detectedPatterns: Array.isArray(parsed.detectedPatterns) ? parsed.detectedPatterns : [],
-        prediction: parsed.prediction || {},
-        volume: stockData.latest.formattedVolume || parsed.volume || `${stockData.latest.volume} 股`,
-        meta: stockData.meta,
-        marketContext: marketContext || null,
-        stockData: stockData, // 包含完整 historicalData 與均線
-        isGeminiVision: false,
-        usedModel: model,
-        analyzedAt: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-      };
+      return normalizeAnalysisResult(parsed, stockData, model, marketContext);
     } catch (err) {
       lastError = err;
     }
   }
 
   throw lastError || new Error('所有 Gemini 模型均無法解析，請檢查 API Key 是否正確');
+}
+
+/**
+ * 外部模型回傳結構強制校驗與正規化防呆
+ */
+function normalizeAnalysisResult(parsed, stockData, model, marketContext) {
+  const pred = parsed.prediction || {};
+  
+  // 1. 機率正規化防呆 (確保加總 100 且均為合法數字)
+  let rawBull = typeof pred.bullishProbability === 'number' && !isNaN(pred.bullishProbability) ? pred.bullishProbability : 50;
+  let rawNeutral = typeof pred.neutralProbability === 'number' && !isNaN(pred.neutralProbability) ? pred.neutralProbability : 20;
+  let rawBear = typeof pred.bearishProbability === 'number' && !isNaN(pred.bearishProbability) ? pred.bearishProbability : 30;
+  
+  const sum = rawBull + rawNeutral + rawBear;
+  let bullishProbability = 50;
+  let neutralProbability = 20;
+  let bearishProbability = 30;
+
+  if (sum > 0) {
+    bullishProbability = Math.round((rawBull / sum) * 100);
+    neutralProbability = Math.round((rawNeutral / sum) * 100);
+    bearishProbability = 100 - bullishProbability - neutralProbability;
+    if (bearishProbability < 0) {
+      bearishProbability = 0;
+      neutralProbability = 100 - bullishProbability;
+    }
+  }
+
+  // 2. 支撐壓力陣列防呆
+  const close = stockData.latest.close || 100;
+  const supportLevels = Array.isArray(pred.supportLevels) && pred.supportLevels.length > 0
+    ? pred.supportLevels.map(n => Number(n)).filter(n => !isNaN(n) && n > 0)
+    : [Number((close * 0.98).toFixed(2)), Number((close * 0.95).toFixed(2))];
+
+  const resistanceLevels = Array.isArray(pred.resistanceLevels) && pred.resistanceLevels.length > 0
+    ? pred.resistanceLevels.map(n => Number(n)).filter(n => !isNaN(n) && n > 0)
+    : [Number((close * 1.02).toFixed(2)), Number((close * 1.05).toFixed(2))];
+
+  // 3. 掛單防呆
+  const orderBooking = pred.orderBooking || {};
+  const buyLimit = typeof orderBooking.buyLimit === 'number' && !isNaN(orderBooking.buyLimit) ? orderBooking.buyLimit : supportLevels[0];
+  const takeProfitLimit = typeof orderBooking.takeProfitLimit === 'number' && !isNaN(orderBooking.takeProfitLimit) ? orderBooking.takeProfitLimit : resistanceLevels[0];
+  const stopLossLimit = typeof orderBooking.stopLossLimit === 'number' && !isNaN(orderBooking.stopLossLimit) ? orderBooking.stopLossLimit : (supportLevels[1] || Number((close * 0.95).toFixed(2)));
+
+  // 4. 決策防呆
+  const allowedDecisions = ['買進', '觀望', '賣出'];
+  const actionDecision = allowedDecisions.includes(pred.actionDecision) ? pred.actionDecision : (bullishProbability > 55 ? '買進' : bearishProbability > 55 ? '賣出' : '觀望');
+
+  return {
+    ...parsed,
+    stockName: parsed.stockName || stockData.stockName,
+    stockCode: stockData.symbol,
+    openPrice: stockData.latest.open,
+    highPrice: stockData.latest.high,
+    lowPrice: stockData.latest.low,
+    closePrice: stockData.latest.close,
+    currentPrice: stockData.latest.close,
+    priceChange: stockData.latest.priceChange,
+    changePercent: stockData.latest.changePercent,
+    latestDate: stockData.latest.date,
+    movingAverages: {
+      ma5: stockData.latest.ma5,
+      ma10: stockData.latest.ma10,
+      ma20: stockData.latest.ma20,
+      ma60: stockData.latest.ma60
+    },
+    detectedPatterns: Array.isArray(parsed.detectedPatterns) ? parsed.detectedPatterns : [],
+    prediction: {
+      ...pred,
+      bullishProbability,
+      neutralProbability,
+      bearishProbability,
+      supportLevels,
+      resistanceLevels,
+      orderBooking: {
+        ...orderBooking,
+        buyLimit,
+        takeProfitLimit,
+        stopLossLimit
+      },
+      actionDecision,
+      confidence: typeof pred.confidence === 'number' && !isNaN(pred.confidence) ? Math.min(100, Math.max(0, pred.confidence)) : 85
+    },
+    volume: stockData.latest.formattedVolume || parsed.volume || `${stockData.latest.volume} 股`,
+    meta: stockData.meta,
+    marketContext: marketContext || null,
+    stockData: stockData, // 包含完整 historicalData 與均線
+    isGeminiVision: false,
+    usedModel: model,
+    analyzedAt: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  };
 }
 
 export async function fetchAvailableGeminiModels(apiKey) {
@@ -335,11 +399,7 @@ export function getGeminiModelCandidates(selectedModel = 'auto', availableModels
 }
 
 function normalizeModelName(modelName = '') {
-  let name = modelName.replace(/^models\//, '').trim();
-  if (name.includes('2.5')) {
-    name = name.replace('2.5', '2.0');
-  }
-  return name;
+  return modelName.replace(/^models\//, '').trim();
 }
 
 function isFreeVisionModel(modelName) {

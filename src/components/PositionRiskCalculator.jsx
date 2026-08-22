@@ -37,15 +37,22 @@ export default function PositionRiskCalculator({ stockCode, stockName, currentPr
     const stop = Math.max(0.01, Number(stopLossPrice) || 0.1);
     const target = Math.max(0.1, Number(targetPrice) || entry * 1.05);
 
+    // 多方計畫方向檢核：停損需低於進場，目標需高於進場
+    const isValidLongPlan = stop < entry && target > entry;
+
     // 最大容許虧損金額 (Dollar Risk)
     const maxRiskDollar = capital * riskRate;
     
     // 單股承受價差風險
-    const perShareRisk = Math.abs(entry - stop);
+    const perShareRisk = entry - stop;
     
-    // 理論可承擔股數 (向下取整)
-    const theoreticalShares = perShareRisk > 0 ? Math.floor(maxRiskDollar / perShareRisk) : 0;
-    const recommendedShares = Math.max(0, theoreticalShares);
+    // 依單筆風險計算理論股數
+    const sharesByRisk = (isValidLongPlan && perShareRisk > 0) ? Math.floor(maxRiskDollar / perShareRisk) : 0;
+    // 依帳戶總資金上限計算最大可買股數 (不可超過本金)
+    const sharesByCapital = Math.floor(capital / entry);
+
+    const isCapitalConstrained = sharesByCapital < sharesByRisk;
+    const recommendedShares = isValidLongPlan ? Math.max(0, Math.min(sharesByRisk, sharesByCapital)) : 0;
     
     // 換算張數與零股
     const lots = Math.floor(recommendedShares / 1000);
@@ -56,27 +63,31 @@ export default function PositionRiskCalculator({ stockCode, stockName, currentPr
     const capitalUsagePercent = capital > 0 ? Number(((totalCapitalRequired / capital) * 100).toFixed(1)) : 0;
 
     // 交易成本計算 (台股手續費率 0.1425%，最低 20 元)
-    const buyFee = Math.max(20, Math.round(totalCapitalRequired * 0.001425 * brokerDiscount));
+    const buyFee = recommendedShares > 0 ? Math.max(20, Math.round(totalCapitalRequired * 0.001425 * brokerDiscount)) : 0;
     
     // 停利出場總手續費與證交稅
     const targetValue = Math.round(recommendedShares * target);
-    const targetSellFee = Math.max(20, Math.round(targetValue * 0.001425 * brokerDiscount));
+    const targetSellFee = recommendedShares > 0 ? Math.max(20, Math.round(targetValue * 0.001425 * brokerDiscount)) : 0;
     const targetTaxRate = isDayTrade ? 0.0015 : 0.003;
     const targetTax = Math.round(targetValue * targetTaxRate);
-    const netProfit = (targetValue - totalCapitalRequired) - (buyFee + targetSellFee + targetTax);
+    const netProfit = recommendedShares > 0 ? (targetValue - totalCapitalRequired) - (buyFee + targetSellFee + targetTax) : 0;
     const profitPercent = totalCapitalRequired > 0 ? Number(((netProfit / totalCapitalRequired) * 100).toFixed(2)) : 0;
 
     // 停損出場總手續費與證交稅
     const stopValue = Math.round(recommendedShares * stop);
-    const stopSellFee = Math.max(20, Math.round(stopValue * 0.001425 * brokerDiscount));
+    const stopSellFee = recommendedShares > 0 ? Math.max(20, Math.round(stopValue * 0.001425 * brokerDiscount)) : 0;
     const stopTax = Math.round(stopValue * targetTaxRate);
-    const netLoss = (totalCapitalRequired - stopValue) + (buyFee + stopSellFee + stopTax);
+    const netLoss = recommendedShares > 0 ? (totalCapitalRequired - stopValue) + (buyFee + stopSellFee + stopTax) : 0;
     const lossPercent = totalCapitalRequired > 0 ? Number(((netLoss / totalCapitalRequired) * 100).toFixed(2)) : 0;
 
     // 真實風報比 (Risk-to-Reward Ratio)
     const riskRewardRatio = netLoss > 0 ? Number((netProfit / netLoss).toFixed(2)) : 0;
 
     return {
+      isValidLongPlan,
+      isCapitalConstrained,
+      sharesByRisk,
+      sharesByCapital,
       maxRiskDollar: Math.round(maxRiskDollar),
       recommendedShares,
       lots,
@@ -94,6 +105,8 @@ export default function PositionRiskCalculator({ stockCode, stockName, currentPr
 
   // 儲存至 LocalStorage 交易計畫
   const handleSaveTradePlan = () => {
+    if (!calculations.isValidLongPlan || calculations.recommendedShares <= 0) return;
+
     try {
       const existing = JSON.parse(localStorage.getItem('kline_trade_plans') || '[]');
       const newPlan = {
@@ -145,6 +158,7 @@ export default function PositionRiskCalculator({ stockCode, stockName, currentPr
 
         <button
           onClick={handleSaveTradePlan}
+          disabled={!calculations.isValidLongPlan || calculations.recommendedShares <= 0}
           className="btn-primary"
           style={{
             fontSize: '0.82rem',
@@ -152,6 +166,8 @@ export default function PositionRiskCalculator({ stockCode, stockName, currentPr
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
+            opacity: (!calculations.isValidLongPlan || calculations.recommendedShares <= 0) ? 0.4 : 1,
+            cursor: (!calculations.isValidLongPlan || calculations.recommendedShares <= 0) ? 'not-allowed' : 'pointer',
             background: isSaved ? '#10b981' : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
             borderColor: isSaved ? '#10b981' : '#3b82f6'
           }}
@@ -160,6 +176,13 @@ export default function PositionRiskCalculator({ stockCode, stockName, currentPr
           <span>{isSaved ? '已保存至交易計畫' : '儲存為我的交易計畫'}</span>
         </button>
       </div>
+
+      {/* 方向防呆警示 */}
+      {!calculations.isValidLongPlan && (
+        <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.4)', color: '#fca5a5', fontSize: '0.82rem', marginBottom: '16px', fontWeight: '600' }}>
+          ⚠️ 價位設定邏輯異常：多方進場計畫中，停損價 (NT$ {stopLossPrice}) 必須低於進場價 (NT$ {entryPrice})，且目標價 (NT$ {targetPrice}) 必須高於進場價。
+        </div>
+      )}
 
       {/* 參數輸入區 (網格排版) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '14px', marginBottom: '18px' }}>
@@ -301,8 +324,9 @@ export default function PositionRiskCalculator({ stockCode, stockName, currentPr
               (共 {calculations.recommendedShares.toLocaleString()} 股)
             </span>
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginTop: '4px' }}>
+          <div style={{ fontSize: '0.75rem', color: calculations.isCapitalConstrained ? '#fcd34d' : '#cbd5e1', marginTop: '4px' }}>
             總買進資金：NT$ {calculations.totalCapitalRequired.toLocaleString()} ({calculations.capitalUsagePercent}% 本金)
+            {calculations.isCapitalConstrained && ' (受帳戶資金上限約束)'}
           </div>
         </div>
 

@@ -2,17 +2,20 @@ import { useEffect, useState } from 'react';
 import { Key, ShieldCheck, ExternalLink, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { GEMINI_MODEL_OPTIONS, fetchAvailableGeminiModels, getGeminiModelCandidates } from '../services/aiVisionService';
 
-export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, selectedModel = 'auto', onSaveModel, patternCount = 12, onSavePatternCount }) {
+export default function ApiKeyModal({ isOpen, onClose, apiKey, initialStorageMode = 'session', onSaveApiKey, selectedModel = 'auto', onSaveModel, patternCount = 12, onSavePatternCount }) {
   const [inputKey, setInputKey] = useState(apiKey || '');
+  const [storageMode, setStorageMode] = useState(initialStorageMode || 'session');
   const [model, setModel] = useState(selectedModel || 'auto');
   const [localPatternCount, setLocalPatternCount] = useState(patternCount);
   const [testStatus, setTestStatus] = useState(null); // null | 'testing' | 'success' | 'error'
   const [testMessage, setTestMessage] = useState('');
 
   useEffect(() => {
+    setInputKey(apiKey || '');
+    setStorageMode(initialStorageMode || 'session');
     setModel(selectedModel || 'auto');
     setLocalPatternCount(patternCount || 12);
-  }, [selectedModel, patternCount]);
+  }, [apiKey, initialStorageMode, selectedModel, patternCount]);
 
   if (!isOpen) return null;
 
@@ -77,7 +80,7 @@ export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, sel
   };
 
   const handleSave = () => {
-    onSaveApiKey(inputKey.trim());
+    onSaveApiKey(inputKey.trim(), storageMode);
     if (onSaveModel) onSaveModel(model);
     if (onSavePatternCount) onSavePatternCount(localPatternCount);
     onClose();
@@ -86,7 +89,7 @@ export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, sel
   const handleClear = () => {
     setInputKey('');
     setTestStatus(null);
-    onSaveApiKey('');
+    onSaveApiKey('', 'session');
     if (onSaveModel) onSaveModel('auto');
     onClose();
   };
@@ -110,9 +113,11 @@ export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, sel
         onClick={(e) => e.stopPropagation()}
         className="glass-panel"
         style={{
-          maxWidth: '540px',
+          maxWidth: '560px',
           width: '100%',
-          padding: '28px'
+          padding: '28px',
+          maxHeight: '90vh',
+          overflowY: 'auto'
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
@@ -120,72 +125,76 @@ export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, sel
             <Key size={20} />
           </div>
           <div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#ffffff' }}>
-              配置 Google Gemini API Key
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0, color: '#f8fafc' }}>
+              配置 Google Gemini AI 視覺模型
             </h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              啟用 Gemini Flash 多模態視覺辨識
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+              解鎖大模型多維量化推演、跨市場共振解讀與第二意見分析
             </p>
           </div>
         </div>
 
-        <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '16px' }}>
-          配置 API Key 後，系統將透過 Google 雲端視覺大模型直接讀取截圖中的全部文字、代碼、價格、均線與 K 線結構。
-        </p>
-
-        {/* 模型自訂選擇 */}
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '0.85rem', color: '#e2e8f0', marginBottom: '6px', fontWeight: '600' }}>
-            指定使用模型 (AI Model)：
+        {/* 模型選擇 */}
+        <div style={{ marginBottom: '18px' }}>
+          <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: '600', marginBottom: '8px', color: '#e2e8f0' }}>
+            🤖 AI 辨識模型偏好
           </label>
           <select
             value={model}
             onChange={(e) => setModel(e.target.value)}
             style={{
               width: '100%',
-              background: '#1a2234',
+              background: '#1a1a2e',
               border: '1px solid var(--border-subtle)',
               borderRadius: '8px',
               padding: '10px 14px',
-              color: '#ffffff',
-              fontSize: '0.9rem',
-              outline: 'none',
-              cursor: 'pointer'
+              color: '#fff',
+              fontSize: '0.88rem',
+              outline: 'none'
             }}
           >
-            {GEMINI_MODEL_OPTIONS.map(({ value, label }) => (
-              <option key={value} value={value}>{label}</option>
+            {GEMINI_MODEL_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value} style={{ background: '#1a1a2e', color: '#fff' }}>
+                {opt.label} ({opt.desc})
+              </option>
             ))}
           </select>
         </div>
 
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '0.85rem', color: '#e2e8f0', marginBottom: '6px', fontWeight: '600' }}>
-            辨識型態數量 (Pattern Count)：
-          </label>
-          <select
-            value={localPatternCount}
-            onChange={(e) => setLocalPatternCount(Number(e.target.value))}
-            style={{
-              width: '100%',
-              background: '#1a2234',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: '8px',
-              padding: '10px 14px',
-              color: '#ffffff',
-              fontSize: '0.9rem',
-              outline: 'none',
-              cursor: 'pointer'
-            }}
-          >
-            <option value={12}>12 種 (預設新手，最常見反轉型態)</option>
-            <option value={52}>52 種 (進階玩家，完整經典圖鑑)</option>
-          </select>
+        {/* 形態辨識數量上限 */}
+        <div style={{ marginBottom: '18px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <label style={{ fontSize: '0.88rem', fontWeight: '600', color: '#e2e8f0' }}>
+              📐 形態偵測演算法覆蓋庫
+            </label>
+            <span style={{ fontSize: '0.8rem', color: '#60a5fa', fontWeight: '700' }}>
+              已載入 {localPatternCount} 種形態
+            </span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <button
+              type="button"
+              onClick={() => setLocalPatternCount(12)}
+              className={`btn-${localPatternCount === 12 ? 'primary' : 'secondary'}`}
+              style={{ padding: '8px 12px', fontSize: '0.82rem', textAlign: 'center' }}
+            >
+              ⭐ Top 12 經典高勝率形態
+            </button>
+            <button
+              type="button"
+              onClick={() => setLocalPatternCount(52)}
+              className={`btn-${localPatternCount === 52 ? 'primary' : 'secondary'}`}
+              style={{ padding: '8px 12px', fontSize: '0.82rem', textAlign: 'center' }}
+            >
+              📚 完整 52 種全形態圖鑑庫
+            </button>
+          </div>
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '0.85rem', color: '#e2e8f0', marginBottom: '6px', fontWeight: '600' }}>
-            Gemini API Key：
+        {/* API Key 輸入框 */}
+        <div style={{ marginBottom: '18px' }}>
+          <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: '600', marginBottom: '8px', color: '#e2e8f0' }}>
+            🔑 Gemini API Key
           </label>
           <div style={{ display: 'flex', gap: '8px' }}>
             <input
@@ -237,9 +246,38 @@ export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, sel
             </div>
           )}
 
-          <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
+          {/* 金鑰儲存模式切換 */}
+          <div style={{ marginTop: '14px', padding: '10px 12px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+              🛡️ 金鑰儲存方式偏好：
+            </div>
+            <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: storageMode === 'session' ? '#60a5fa' : '#94a3b8', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="storageMode"
+                  value="session"
+                  checked={storageMode === 'session'}
+                  onChange={() => setStorageMode('session')}
+                />
+                <span>僅限本次工作階段 (推薦，關閉分頁即銷毀)</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: storageMode === 'local' ? '#34d399' : '#94a3b8', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="storageMode"
+                  value="local"
+                  checked={storageMode === 'local'}
+                  onChange={() => setStorageMode('local')}
+                />
+                <span>儲存於此瀏覽器 (下次免重複輸入)</span>
+              </label>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', flexWrap: 'wrap', gap: '8px' }}>
             <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <ShieldCheck size={14} color="#10b981" /> 僅儲存於您本地瀏覽器 (localStorage)
+              <ShieldCheck size={14} color="#10b981" /> 前端直連 Google，絕不上傳第三方伺服器
             </span>
             <a
               href="https://aistudio.google.com/api-keys"
@@ -247,7 +285,7 @@ export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, sel
               rel="noreferrer"
               style={{ color: '#60a5fa', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '2px' }}
             >
-                前往 Google AI Studio 申請免費 Key <ExternalLink size={12} />
+              前往 Google AI Studio 申請免費 Key <ExternalLink size={12} />
             </a>
           </div>
         </div>

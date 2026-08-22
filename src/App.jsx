@@ -17,16 +17,25 @@ export default function App() {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [apiKey, setApiKey] = useState('');
+  const [apiKeyStorageMode, setApiKeyStorageMode] = useState('session');
   const [selectedModel, setSelectedModel] = useState('gemini-2.0-flash');
   const [patternCount, setPatternCount] = useState(12);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
   const [loadedSimulatorPattern, setLoadedSimulatorPattern] = useState(null);
 
-  // 讀取儲存的 API Key 與模型設定
+  // 讀取儲存的 API Key (優先從 sessionStorage 讀取，其次 localStorage) 與模型設定
   useEffect(() => {
-    const savedKey = localStorage.getItem('kline_gemini_api_key');
-    if (savedKey) setApiKey(savedKey);
+    const sessionKey = sessionStorage.getItem('kline_gemini_api_key');
+    const localKey = localStorage.getItem('kline_gemini_api_key');
+
+    if (sessionKey) {
+      setApiKey(sessionKey);
+      setApiKeyStorageMode('session');
+    } else if (localKey) {
+      setApiKey(localKey);
+      setApiKeyStorageMode('local');
+    }
 
     const savedModel = localStorage.getItem('kline_gemini_model');
     if (savedModel) {
@@ -39,11 +48,20 @@ export default function App() {
     if (savedPatternCount) setPatternCount(Number(savedPatternCount));
   }, []);
 
-  const handleSaveApiKey = (key) => {
+  const handleSaveApiKey = (key, mode = 'session') => {
     setApiKey(key);
+    setApiKeyStorageMode(mode);
+
     if (key) {
-      localStorage.setItem('kline_gemini_api_key', key);
+      if (mode === 'session') {
+        sessionStorage.setItem('kline_gemini_api_key', key);
+        localStorage.removeItem('kline_gemini_api_key');
+      } else {
+        localStorage.setItem('kline_gemini_api_key', key);
+        sessionStorage.removeItem('kline_gemini_api_key');
+      }
     } else {
+      sessionStorage.removeItem('kline_gemini_api_key');
       localStorage.removeItem('kline_gemini_api_key');
     }
   };
@@ -106,16 +124,28 @@ export default function App() {
       // 自動記錄至 AI 預測成效歷史快照 (LocalStorage)
       try {
         const existingLogs = JSON.parse(localStorage.getItem('kline_prediction_history') || '[]');
-        const isBull = (result?.prediction?.bullishProbability ?? 50) >= (result?.prediction?.bearishProbability ?? 50);
+        const bullProb = result?.prediction?.bullishProbability ?? 50;
+        const bearProb = result?.prediction?.bearishProbability ?? 30;
+        const neutralProb = result?.prediction?.neutralProbability ?? 20;
+        const dominantSentiment = bullProb > bearProb && bullProb > neutralProb ? 'bullish' : bearProb > bullProb && bearProb > neutralProb ? 'bearish' : 'neutral';
+
         const newLog = {
           id: `pred_${Date.now()}`,
           date: new Date().toISOString(),
+          baseDate: result?.latestDate || new Date().toISOString().split('T')[0],
           stockCode: result?.stockCode || stockCode,
           stockName: finalStockName,
-          sentiment: isBull ? 'bullish' : 'bearish',
-          probability: isBull ? result?.prediction?.bullishProbability : result?.prediction?.bearishProbability,
+          sentiment: dominantSentiment,
+          bullishProbability: bullProb,
+          bearishProbability: bearProb,
+          neutralProbability: neutralProb,
+          probability: dominantSentiment === 'bullish' ? bullProb : dominantSentiment === 'bearish' ? bearProb : neutralProb,
           initialPrice: result?.closePrice || result?.currentPrice || stockData?.latest?.close,
-          patternName: result?.detectedPatterns?.[0]?.name || '形態分析'
+          patternName: result?.detectedPatterns?.[0]?.name || '形態分析',
+          supportLevel: result?.prediction?.supportLevels?.[0],
+          resistanceLevel: result?.prediction?.resistanceLevels?.[0],
+          stopLoss: result?.prediction?.orderBooking?.stopLossLimit,
+          targetPrice: result?.prediction?.orderBooking?.takeProfitLimit
         };
         existingLogs.unshift(newLog);
         localStorage.setItem('kline_prediction_history', JSON.stringify(existingLogs.slice(0, 100)));
@@ -214,6 +244,7 @@ export default function App() {
         isOpen={isApiKeyModalOpen}
         onClose={() => setIsApiKeyModalOpen(false)}
         apiKey={apiKey}
+        initialStorageMode={apiKeyStorageMode}
         onSaveApiKey={handleSaveApiKey}
         selectedModel={selectedModel}
         onSaveModel={handleSaveModel}

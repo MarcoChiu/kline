@@ -275,7 +275,7 @@ export default function SwingPivotCalculator({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ padding: '3px 8px', borderRadius: '4px', background: '#10b981', color: '#0f172a', fontSize: '0.75rem', fontWeight: '900' }}>
-                  影片核心公式
+                  回檔支撐
                 </span>
                 <span style={{ fontSize: '0.88rem', fontWeight: '700', color: '#f8fafc' }}>
                   關鍵支撐位 (回檔抄底價)

@@ -16,41 +16,49 @@ function getCandleMetrics(bar) {
 }
 
 /**
- * 根據最新數據自動辨識最顯著的 K 線形態
+ * 根據指定索引位置的歷史數據自動辨識該日 K 線形態
+ * @param {Array} historicalData 完整歷史 K 棒陣列
+ * @param {number} index 指定辨識的 K 棒索引 (預設為最新一根)
  */
-function detectLatestPattern(historicalData) {
+export function detectPatternAtBar(historicalData, index = -1) {
   if (!historicalData || historicalData.length === 0) {
     return {
       patternId: 'big_bull',
       name: '大陽線 / 光頭光腳長紅',
       confidence: 85,
+      sentiment: 'bullish',
       description: '多方主力掌控盤面進攻節奏，實體紅 K 展現實質推升力道。'
     };
   }
 
   const n = historicalData.length;
-  const latest = historicalData[n - 1];
-  const prev = n > 1 ? historicalData[n - 2] : latest;
+  const targetIdx = index >= 0 && index < n ? index : n - 1;
+  const latest = historicalData[targetIdx];
+  const prev = targetIdx > 0 ? historicalData[targetIdx - 1] : latest;
+  const prev2 = targetIdx > 1 ? historicalData[targetIdx - 2] : prev;
 
   const currM = getCandleMetrics(latest);
   const prevM = getCandleMetrics(prev);
+  const prev2M = getCandleMetrics(prev2);
 
-  // 1. 多頭吞噬
+  // 1. 多頭吞噬 (陽包陰起漲)
   if (!prevM.isBull && currM.isBull && latest.open <= prev.close && latest.close >= prev.open && currM.body >= prevM.body) {
     return {
       patternId: 'bullish_engulfing',
       name: '多頭吞噬 / 陽包陰起漲',
       confidence: 88,
+      sentiment: 'bullish',
       description: '今日長紅實體一口氣吞沒昨日黑 K 實體，低檔爆發強勁抄底買盤，多方奪回主導權。'
     };
   }
 
-  // 2. 空頭吞噬
+  // 2. 空頭吞噬 (陰包陽斷頭)
   if (prevM.isBull && !currM.isBull && latest.open >= prev.close && latest.close <= prev.open && currM.body >= prevM.body) {
     return {
       patternId: 'bearish_engulfing',
       name: '空頭吞噬 / 陰包陽斷頭',
       confidence: 88,
+      sentiment: 'bearish',
       description: '今日長黑實體完全覆蓋昨日紅 K，高檔賣壓沉重，短線獲利了結賣壓湧現。'
     };
   }
@@ -61,6 +69,7 @@ function detectLatestPattern(historicalData) {
       patternId: 'hammer',
       name: '槌子線 / 低檔探底神針',
       confidence: 82,
+      sentiment: 'bullish',
       description: '盤中遭遇空方摜壓後迅速被主力大單拉起，留有長下影線，顯示下檔支撐強勁。'
     };
   }
@@ -71,37 +80,103 @@ function detectLatestPattern(historicalData) {
       patternId: 'shooting_star',
       name: '流星線 / 射擊之星遇阻',
       confidence: 80,
+      sentiment: 'bearish',
       description: '早盤多頭嘗試衝高後在天花板遭遇沉重倒貨賣壓，留下長上影線，短線宜居安思危。'
     };
   }
 
-  // 5. 大陽線 (長紅 K)
+  // 5. 早晨之星 (啟明之星)
+  if (!prev2M.isBull && prevM.bodyPercent < 1.0 && currM.isBull && currM.bodyPercent >= 1.5 && latest.close >= (prev2.open + prev2.close) / 2) {
+    return {
+      patternId: 'morning_star',
+      name: '早晨之星 / 底部轉折',
+      confidence: 89,
+      sentiment: 'bullish',
+      description: '長黑急殺後接小星線整固，今日長紅帶量反轉確立底部翻揚。'
+    };
+  }
+
+  // 6. 黃昏之星 (高檔見頂)
+  if (prev2M.isBull && prevM.bodyPercent < 1.0 && !currM.isBull && currM.bodyPercent >= 1.5 && latest.close <= (prev2.open + prev2.close) / 2) {
+    return {
+      patternId: 'evening_star',
+      name: '黃昏之星 / 高檔轉折',
+      confidence: 89,
+      sentiment: 'bearish',
+      description: '長紅衝高後接高檔星線，今日長黑摜破多方防線，波段獲利賣壓出籠。'
+    };
+  }
+
+  // 7. 貫穿線 (曙光初現)
+  if (!prevM.isBull && currM.isBull && latest.open <= prev.low && latest.close > (prev.open + prev.close) / 2) {
+    return {
+      patternId: 'piercing_line',
+      name: '貫穿線 / 曙光初現',
+      confidence: 84,
+      sentiment: 'bullish',
+      description: '開低走高深入昨日黑 K 實體二分之一以上，多方展現強勢反攻決心。'
+    };
+  }
+
+  // 8. 烏雲罩頂
+  if (prevM.isBull && !currM.isBull && latest.open >= prev.high && latest.close < (prev.open + prev.close) / 2) {
+    return {
+      patternId: 'dark_cloud_cover',
+      name: '烏雲罩頂 / 空方反撲',
+      confidence: 84,
+      sentiment: 'bearish',
+      description: '高開低走深入昨日紅 K 實體二分之一以下，短線多頭動能衰竭。'
+    };
+  }
+
+  // 9. 大陽線 (長紅 K)
   if (currM.isBull && currM.bodyPercent >= 2.5) {
     return {
       patternId: 'big_bull',
       name: '大陽線 / 光頭光腳長紅',
       confidence: 85,
+      sentiment: 'bullish',
       description: '多方買盤積極進攻，實體紅 K 飽滿，買氣從開盤貫徹至尾盤，趨勢偏多。'
     };
   }
 
-  // 6. 大陰線 (長黑 K)
+  // 10. 大陰線 (長黑 K)
   if (!currM.isBull && currM.bodyPercent >= 2.5) {
     return {
       patternId: 'big_bear',
       name: '大陰線 / 長黑摜壓',
       confidence: 85,
+      sentiment: 'bearish',
       description: '空方賣盤全面宣洩，實體綠 K 摜破多頭防線，宜保守應對並嚴設停損。'
     };
   }
 
-  // 預設 (十字星/整固線)
+  // 11. 十字變盤線
+  if (currM.bodyPercent <= 0.35) {
+    return {
+      patternId: 'long_legged_doji',
+      name: '十字變盤線 / 區間平衡',
+      confidence: 75,
+      sentiment: 'neutral',
+      description: '多空雙方在當前價位勢均力敵，實體小且處於平衡點，等待後續方向表態。'
+    };
+  }
+
+  // 12. 標準 K 棒
   return {
-    patternId: 'long_legged_doji',
-    name: '十字變盤線 / 區間平衡線',
-    confidence: 75,
-    description: '多空雙方在當前價位勢均力敵，實體小且處於均線糾結處，等待後續方向表態。'
+    patternId: currM.isBull ? 'small_bull' : 'small_bear',
+    name: currM.isBull ? '小陽線 / 盤整紅K' : '小陰線 / 盤整綠K',
+    confidence: 70,
+    sentiment: currM.isBull ? 'bullish' : 'bearish',
+    description: currM.isBull ? '價格常態推升，多方略佔優勢。' : '價格常態回檔，空方略佔優勢。'
   };
+}
+
+/**
+ * 根據最新數據自動辨識最顯著的 K 線形態
+ */
+function detectLatestPattern(historicalData) {
+  return detectPatternAtBar(historicalData, historicalData ? historicalData.length - 1 : -1);
 }
 
 /**
@@ -142,19 +217,42 @@ export function generateLocalQuantitativeAnalysis(stockData, marketContext = nul
   // 形態辨識
   const detectedPattern = detectLatestPattern(historicalData);
 
-  // 多空機率量化估算
-  let bullishProb = 50;
-  if (isBullTrend) bullishProb += 20;
-  if (isBearTrend) bullishProb -= 20;
-  if ((latest.priceChange || 0) > 0) bullishProb += 10;
-  if ((latest.priceChange || 0) < 0) bullishProb -= 10;
-  if (currentPrice > ma60) bullishProb += 5;
-  if (currentPrice < ma60) bullishProb -= 5;
-  bullishProb = Math.max(15, Math.min(85, bullishProb));
-  const bearishProb = 100 - bullishProb;
-  const neutralProb = 15;
+  // 多空機率量化估算 (原始分數加權並正規化為 100%)
+  let bullScore = 45;
+  let bearScore = 45;
+  let neutralScore = 25;
 
-  const isMoreBull = bullishProb >= 50;
+  if (isBullTrend) {
+    bullScore += 25;
+    bearScore = Math.max(10, bearScore - 15);
+    neutralScore = Math.max(10, neutralScore - 10);
+  } else if (isBearTrend) {
+    bearScore += 25;
+    bullScore = Math.max(10, bullScore - 15);
+    neutralScore = Math.max(10, neutralScore - 10);
+  } else {
+    neutralScore += 15; // 盤整形態提升中性比重
+  }
+
+  if ((latest.priceChange || 0) > 0) {
+    bullScore += 12;
+  } else if ((latest.priceChange || 0) < 0) {
+    bearScore += 12;
+  }
+
+  if (currentPrice > ma60) {
+    bullScore += 8;
+  } else if (currentPrice < ma60) {
+    bearScore += 8;
+  }
+
+  // 計算總分並正規化至 100%
+  const totalScore = bullScore + bearScore + neutralScore;
+  const bullishProb = Math.round((bullScore / totalScore) * 100);
+  const bearishProb = Math.round((bearScore / totalScore) * 100);
+  const neutralProb = Math.max(0, 100 - bullishProb - bearishProb);
+
+  const isMoreBull = bullishProb >= bearishProb && bullishProb >= neutralProb;
 
   return {
     stockName: stockName || symbol || '台股標的',

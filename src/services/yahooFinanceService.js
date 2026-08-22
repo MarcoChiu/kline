@@ -5,12 +5,25 @@ const PROXIES = [
   'https://corsproxy.io/?'
 ];
 
+// 短期記憶體快取 (減少頻繁重複請求被公開代理限流)
+const stockDataCache = new Map(); // key -> { data, timestamp }
+const STOCK_CACHE_TTL = 60 * 1000; // 60 秒
+
+const marketContextCache = new Map(); // key -> { data, timestamp }
+const MARKET_CACHE_TTL = 120 * 1000; // 120 秒
+
 /**
  * 從 Yahoo Finance 獲取 K 線歷史資料 (OHLCV)
  * @param {string} stockCode - 股票代碼 (預設加上 .TW 搜尋台股)
  * @param {number} days - 獲取天數 (預設 90 天，大約 3 個月)
  */
 export async function fetchStockData(stockCode, days = 90) {
+  const cacheKey = `${stockCode.trim().toUpperCase()}_${days}`;
+  const cached = stockDataCache.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp < STOCK_CACHE_TTL)) {
+    return cached.data;
+  }
+
   // 自動產生台股上市(.TW)/上櫃(.TWO)備選名單
   let symbol = stockCode.trim().toUpperCase();
   let symbolsToTry = [symbol];
@@ -171,7 +184,7 @@ export async function fetchStockData(stockCode, days = 90) {
   const volumeLots = latest.volume ? Math.round(latest.volume / 1000) : 0;
   const formattedVolume = `${volumeLots.toLocaleString()} 張 (${(latest.volume || 0).toLocaleString()} 股)`;
 
-  return {
+  const transformedResult = {
     symbol: finalSymbol,
     stockName,
     meta: {
@@ -201,6 +214,9 @@ export async function fetchStockData(stockCode, days = 90) {
     historicalData: recentData,
     fullHistoricalData: formattedData
   };
+
+  stockDataCache.set(cacheKey, { data: transformedResult, timestamp: Date.now() });
+  return transformedResult;
 }
 
 /**
@@ -326,6 +342,12 @@ export async function fetchSingleQuote(symbol, displayName = null) {
  * 依據勾選條件抓取美股與期貨市場連動數據
  */
 export async function fetchMarketContextData({ includeFutures = true, includeUS = true } = {}) {
+  const cacheKey = `${includeFutures ? 'futures' : 'nofutures'}_${includeUS ? 'us' : 'nous'}`;
+  const cached = marketContextCache.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp < MARKET_CACHE_TTL)) {
+    return cached.data;
+  }
+
   const tasks = [];
   const results = {
     futuresAndIndex: [],
@@ -375,6 +397,7 @@ export async function fetchMarketContextData({ includeFutures = true, includeUS 
     await Promise.allSettled(tasks);
   }
 
+  marketContextCache.set(cacheKey, { data: results, timestamp: Date.now() });
   return results;
 }
 

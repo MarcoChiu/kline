@@ -237,11 +237,16 @@ export default function PatternEncyclopedia({ onLoadToSimulator }) {
               onClick={() => setSortBy(prev => prev === 'winRateDesc' ? 'default' : 'winRateDesc')}
               className={`btn-${sortBy === 'winRateDesc' ? 'primary' : 'secondary'}`}
               style={{ fontSize: '0.82rem', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
-              title="按歷史勝率由高到低排序"
+              title="按教科書歷史勝率由高到低排序"
             >
               <ArrowUpDown size={15} color={sortBy === 'winRateDesc' ? '#fff' : '#f59e0b'} />
-              <span>{sortBy === 'winRateDesc' ? '🏆 勝率最高優先' : '預設排序'}</span>
+              <span>{sortBy === 'winRateDesc' ? '🏆 參考勝率由高到低' : '預設排序'}</span>
             </button>
+          </div>
+
+          {/* 教科書統計免責提示 */}
+          <div style={{ marginTop: '12px', padding: '8px 12px', background: 'rgba(59, 130, 246, 0.08)', borderRadius: '6px', border: '1px solid rgba(59, 130, 246, 0.2)', fontSize: '0.78rem', color: '#93c5fd', lineHeight: '1.5', width: '100%' }}>
+            📌 <strong>統計參考說明：</strong>本圖鑑所標示之勝率為經典形態學教科書與長波段市場樣本之統計參考值，非個別股票未來報酬之保證。實際交易請務必以 K 線分析儀針對該個股近 500 根日 K 之「真實回測報告」與嚴格風控停損點為依歸。
           </div>
         </div>
 
@@ -517,7 +522,7 @@ export default function PatternEncyclopedia({ onLoadToSimulator }) {
                   <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <Award size={15} color="#f59e0b" />
                     <span>
-                      歷史勝率：<strong style={{ color: '#fff', fontSize: '0.95rem' }}>{pattern.winRate}%</strong>
+                      教科書參考勝率：<strong style={{ color: '#fff', fontSize: '0.95rem' }}>{pattern.winRate}%</strong>
                     </span>
                   </div>
 

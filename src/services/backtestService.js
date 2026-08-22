@@ -193,13 +193,14 @@ function resolveDetector(patternId, patternName = '') {
 }
 
 /**
- * 執行個股歷史資料完整回測
+ * 執行個股歷史資料完整回測 (嚴謹量化版：次日開盤進場、扣除台股摩擦成本、最大回撤估算)
  * @param {Array} fullHistory - 個股全部歷史 K 棒 (~500 根)
  * @param {string} patternId - 形態 ID
  * @param {string} patternName - 形態中文名稱
  * @param {string} sentiment - 'bullish' | 'bearish' (多空預設方向)
+ * @param {object} options - 交易參數 (如手續費率、滑價)
  */
-export function runPatternBacktest(fullHistory, patternId, patternName = '', sentiment = 'bullish') {
+export function runPatternBacktest(fullHistory, patternId, patternName = '', sentiment = 'bullish', options = {}) {
   if (!fullHistory || !Array.isArray(fullHistory) || fullHistory.length < 30) {
     return null;
   }
@@ -208,7 +209,10 @@ export function runPatternBacktest(fullHistory, patternId, patternName = '', sen
   const totalBars = fullHistory.length;
   const occurrences = [];
 
-  // 掃描歷史 (預留最近 1 根作為當前進行中 K 棒，不計入已完結回測樣本)
+  // 台股交易摩擦成本：買賣手續費 0.1425% * 2 + 證交稅 0.3% = 0.585%
+  const frictionCostPercent = options.frictionCostPercent ?? 0.585;
+
+  // 掃描歷史 (最後 1 根為今日進行中，無法進行次日開盤進場，故掃描至 totalBars - 2)
   for (let i = 2; i < totalBars - 1; i++) {
     if (detect(fullHistory, i)) {
       occurrences.push(i);
@@ -216,10 +220,13 @@ export function runPatternBacktest(fullHistory, patternId, patternName = '', sen
   }
 
   const sampleCount = occurrences.length;
+  const isLowSample = sampleCount < 5;
+
   if (sampleCount === 0) {
     return {
       patternId: resolvedId,
       sampleCount: 0,
+      isLowSample: true,
       totalBarsAnalyzed: totalBars,
       message: '過去 2 年中該個股未出現完全符合此嚴格定義之歷史樣本。'
     };
@@ -231,6 +238,7 @@ export function runPatternBacktest(fullHistory, patternId, patternName = '', sen
 
   holdingPeriods.forEach((period) => {
     const returns = [];
+    const drawdowns = [];
     let wins = 0;
     let losses = 0;
     let grossProfit = 0;
@@ -239,36 +247,59 @@ export function runPatternBacktest(fullHistory, patternId, patternName = '', sen
     let maxLoss = Infinity;
 
     occurrences.forEach((idx) => {
-      // 確保有未來的 K 棒可供評估
-      const exitIdx = Math.min(totalBars - 1, idx + period);
-      if (exitIdx <= idx) return;
+      // 訊號於第 idx 根收盤確認，於第 idx + 1 根開盤價進場
+      const entryIdx = idx + 1;
+      if (entryIdx >= totalBars) return;
 
-      const entryPrice = fullHistory[idx].close;
+      const entryPrice = fullHistory[entryIdx].open || fullHistory[entryIdx].close;
+      if (!entryPrice || entryPrice <= 0) return;
+
+      // 出場 K 棒：持有 period 天 (第 entryIdx + period - 1 根收盤出場)
+      // 若歷史資料尾端不足完整的持有天數，嚴格排除此筆交易以確保統計準確性
+      const exitIdx = entryIdx + period - 1;
+      if (exitIdx >= totalBars) return;
+
       const exitPrice = fullHistory[exitIdx].close;
-      
-      // 計算多空報酬率
-      let retPercent = ((exitPrice - entryPrice) / entryPrice) * 100;
+      if (!exitPrice || exitPrice <= 0) return;
+
+      // 計算扣除摩擦成本後的淨報酬率
+      let rawReturnPercent = ((exitPrice - entryPrice) / entryPrice) * 100;
       if (!isBull) {
-        retPercent = -retPercent; // 偏空操作，跌為賺
+        rawReturnPercent = -rawReturnPercent; // 偏空操作，跌為賺
       }
+      const netReturnPercent = Number((rawReturnPercent - frictionCostPercent).toFixed(2));
+      returns.push(netReturnPercent);
 
-      returns.push(retPercent);
+      // 計算持倉期間的最大盤中回撤 (Max Intra-Period Drawdown)
+      let worstMdd = 0;
+      for (let bar = entryIdx; bar <= exitIdx; bar++) {
+        const barData = fullHistory[bar];
+        if (isBull) {
+          const dd = ((barData.low - entryPrice) / entryPrice) * 100;
+          if (dd < worstMdd) worstMdd = dd;
+        } else {
+          const dd = ((entryPrice - barData.high) / entryPrice) * 100;
+          if (dd < worstMdd) worstMdd = dd;
+        }
+      }
+      drawdowns.push(worstMdd);
 
-      if (retPercent > 0) {
+      if (netReturnPercent > 0) {
         wins++;
-        grossProfit += retPercent;
-      } else if (retPercent < 0) {
+        grossProfit += netReturnPercent;
+      } else if (netReturnPercent < 0) {
         losses++;
-        grossLoss += Math.abs(retPercent);
+        grossLoss += Math.abs(netReturnPercent);
       }
 
-      if (retPercent > maxWin) maxWin = retPercent;
-      if (retPercent < maxLoss) maxLoss = retPercent;
+      if (netReturnPercent > maxWin) maxWin = netReturnPercent;
+      if (netReturnPercent < maxLoss) maxLoss = netReturnPercent;
     });
 
     const evaluatedCount = returns.length;
     const winRate = evaluatedCount > 0 ? Number(((wins / evaluatedCount) * 100).toFixed(1)) : 0;
     const avgReturn = evaluatedCount > 0 ? Number((returns.reduce((a, b) => a + b, 0) / evaluatedCount).toFixed(2)) : 0;
+    const avgDrawdown = drawdowns.length > 0 ? Number((drawdowns.reduce((a, b) => a + b, 0) / drawdowns.length).toFixed(2)) : 0;
     const profitFactor = grossLoss > 0 ? Number((grossProfit / grossLoss).toFixed(2)) : (grossProfit > 0 ? 99.9 : 0);
 
     periodStats[`${period}D`] = {
@@ -278,7 +309,9 @@ export function runPatternBacktest(fullHistory, patternId, patternName = '', sen
       losses,
       winRate,
       avgReturn,
+      avgDrawdown,
       profitFactor,
+      isLowSample: evaluatedCount < 5,
       maxWin: maxWin !== -Infinity ? Number(maxWin.toFixed(2)) : 0,
       maxLoss: maxLoss !== Infinity ? Number(maxLoss.toFixed(2)) : 0
     };
@@ -290,10 +323,14 @@ export function runPatternBacktest(fullHistory, patternId, patternName = '', sen
   return {
     patternId: resolvedId,
     sampleCount,
+    isLowSample,
+    frictionCostPercent,
+    executionModel: '次日開盤價進場 (Next-Bar Open Entry)',
     totalBarsAnalyzed: totalBars,
     sentiment,
     isBullishStrategy: isBull,
     periods: periodStats,
-    recentOccurrenceDates
+    recentOccurrenceDates,
+    warning: isLowSample ? '⚠️ 歷史樣本數不足 (N < 5)，統計結果易受單一極值干擾，僅供參考' : null
   };
 }

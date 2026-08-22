@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
 import { Download, Layers } from 'lucide-react';
 import { KLINE_PATTERNS } from '../data/klinePatterns';
+import { detectPatternAtBar } from '../services/localQuantitativeService';
 
 /**
  * Yahoo 奇摩股市風格 K 線圖表與籌碼 K 線標註系統
@@ -48,6 +49,12 @@ export default function YahooKlineCanvas({ stockData, stockName: propStockName, 
   // 計算選中項目的漲跌
   const priceChange = currentItem && prevItem ? Number((currentItem.close - prevItem.close).toFixed(2)) : 0;
   const changePercent = prevItem && prevItem.close ? Number(((priceChange / prevItem.close) * 100).toFixed(2)) : 0;
+
+  // 當前所選/懸浮之歷史 K 棒形態即時解析
+  const currentPattern = useMemo(() => {
+    if (activeIndex === null || !historicalData || historicalData.length === 0) return null;
+    return detectPatternAtBar(historicalData, activeIndex);
+  }, [historicalData, activeIndex]);
 
   // 繪製 Canvas 圖表
   const renderChart = () => {
@@ -516,6 +523,28 @@ export default function YahooKlineCanvas({ stockData, stockName: propStockName, 
       ctx.lineTo(width - paddingRight, hy);
       ctx.stroke();
 
+      // 繪製懸浮歷史 K 棒的形態辨識小氣泡
+      const hPattern = detectPatternAtBar(historicalData, hoverIndex);
+      if (hPattern && hPattern.name) {
+        ctx.setLineDash([]);
+        const tagText = `📅 ${hItem.date} | ${hPattern.name.split(' ')[0]}`;
+        ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        const tw = ctx.measureText(tagText).width;
+        const twBox = tw + 14;
+        const tagX = Math.max(paddingLeft + 4, Math.min(hx - twBox / 2, width - paddingRight - twBox - 4));
+        const tagY = topChartTop + 6;
+
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(tagX, tagY, twBox, 18);
+        ctx.strokeStyle = hPattern.sentiment === 'bullish' ? '#ef4444' : hPattern.sentiment === 'bearish' ? '#10b981' : '#f59e0b';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(tagX, tagY, twBox, 18);
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.textAlign = 'left';
+        ctx.fillText(tagText, tagX + 6, tagY + 13);
+      }
+
       ctx.restore();
     }
   };
@@ -698,10 +727,10 @@ export default function YahooKlineCanvas({ stockData, stockName: propStockName, 
 
       </div>
 
-      {/* Yahoo 奇摩標準報價資訊列 (開、高、低、收、量、漲跌) */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', fontSize: '0.92rem', marginBottom: '10px', color: '#334155' }}>
-        <div style={{ fontWeight: '600', color: '#64748b', fontSize: '0.88rem' }}>
-          {currentItem ? currentItem.date : ''}
+      {/* Yahoo 奇摩標準報價資訊列 (開、高、低、收、量、漲跌 + 當日形態辨識) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', fontSize: '0.92rem', marginBottom: '10px', color: '#334155' }}>
+        <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '0.9rem' }}>
+          📅 {currentItem ? currentItem.date : ''}
         </div>
         <div>開 <span style={{ fontWeight: '700', color: priceColor }}>{currentItem?.open}</span></div>
         <div>高 <span style={{ fontWeight: '700', color: '#ef4444' }}>{currentItem?.high}</span></div>
@@ -713,6 +742,32 @@ export default function YahooKlineCanvas({ stockData, stockName: propStockName, 
             {priceChange > 0 ? `+${priceChange}` : priceChange} ({priceChange > 0 ? `+${changePercent}%` : `${changePercent}%`})
           </span>
         </div>
+
+        {/* 即時歷史形態解析標籤 */}
+        {currentPattern && (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}>
+            <span style={{
+              fontSize: '0.78rem',
+              padding: '3px 8px',
+              borderRadius: '6px',
+              background: currentPattern.sentiment === 'bullish' ? 'rgba(239, 68, 68, 0.15)' : currentPattern.sentiment === 'bearish' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+              color: currentPattern.sentiment === 'bullish' ? '#dc2626' : currentPattern.sentiment === 'bearish' ? '#059669' : '#d97706',
+              border: `1px solid ${currentPattern.sentiment === 'bullish' ? 'rgba(239, 68, 68, 0.3)' : currentPattern.sentiment === 'bearish' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+              fontWeight: '800'
+            }}>
+              💡 形態辨識：{currentPattern.name}
+            </span>
+            {onPatternClick && (
+              <button
+                type="button"
+                onClick={() => onPatternClick(currentPattern)}
+                style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+              >
+                操盤守則 →
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* MA 均線切換控制與數值列 */}

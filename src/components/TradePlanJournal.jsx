@@ -30,12 +30,15 @@ export default function TradePlanJournal({ onSelectStockToAnalyze }) {
     loadData();
   }, []);
 
-  // 批次更新所有計畫的即時行情
+  // 批次更新所有計畫與預測紀錄的即時行情
   const handleRefreshAll = useCallback(async () => {
-    if (plans.length === 0) return;
+    const codesFromPlans = plans.map(p => p.stockCode);
+    const codesFromPredictions = predictionLogs.map(l => l.stockCode);
+    const uniqueCodes = Array.from(new Set([...codesFromPlans, ...codesFromPredictions])).filter(c => c && c !== '0000');
+
+    if (uniqueCodes.length === 0) return;
     setIsRefreshing(true);
 
-    const uniqueCodes = Array.from(new Set(plans.map(p => p.stockCode).filter(c => c && c !== '0000')));
     const priceMap = {};
 
     for (const code of uniqueCodes) {
@@ -58,14 +61,14 @@ export default function TradePlanJournal({ onSelectStockToAnalyze }) {
 
     setLivePrices(prev => ({ ...prev, ...priceMap }));
     setIsRefreshing(false);
-  }, [plans]);
+  }, [plans, predictionLogs]);
 
   // 初始載入時自動觸發一次現價更新
   useEffect(() => {
-    if (plans.length > 0) {
+    if (plans.length > 0 || predictionLogs.length > 0) {
       handleRefreshAll();
     }
-  }, [plans, handleRefreshAll]);
+  }, [plans, predictionLogs, handleRefreshAll]);
 
   // 更新計畫狀態
   const handleUpdateStatus = (planId, newStatus) => {
@@ -97,31 +100,108 @@ export default function TradePlanJournal({ onSelectStockToAnalyze }) {
     return plans.filter(p => p.status === statusFilter);
   }, [plans, statusFilter]);
 
-  // 計算 AI 預測命中率統計
+  // 計算 AI 預測命中率統計 (區分 1D / 3D / 5D 時間窗口與多空方向)
   const aiStats = useMemo(() => {
     if (!predictionLogs || predictionLogs.length === 0) {
-      return { total: 0, verified: 0, wins: 0, accuracy: 0 };
+      return {
+        total: 0,
+        evaluated: 0,
+        pending: 0,
+        wins: 0,
+        accuracy: 0,
+        bullWins: 0,
+        bullTotal: 0,
+        bearWins: 0,
+        bearTotal: 0,
+        horizon1D: { total: 0, wins: 0, accuracy: 0 },
+        horizon3D: { total: 0, wins: 0, accuracy: 0 },
+        horizon5D: { total: 0, wins: 0, accuracy: 0 }
+      };
     }
 
-    let verified = 0;
+    const now = new Date();
+    let evaluated = 0;
+    let pending = 0;
     let wins = 0;
+    let bullWins = 0;
+    let bullTotal = 0;
+    let bearWins = 0;
+    let bearTotal = 0;
+
+    const h1 = { total: 0, wins: 0 };
+    const h3 = { total: 0, wins: 0 };
+    const h5 = { total: 0, wins: 0 };
 
     predictionLogs.forEach(log => {
       const current = livePrices[log.stockCode];
-      if (current && current.price && log.initialPrice) {
-        verified++;
-        const priceDiff = current.price - log.initialPrice;
-        const isBullPred = log.sentiment === 'bullish';
-        const isBearPred = log.sentiment === 'bearish';
+      const logDate = new Date(log.date || log.baseDate || Date.now());
+      const daysElapsed = Math.max(0, Math.floor((now - logDate) / (1000 * 60 * 60 * 24)));
 
-        if ((isBullPred && priceDiff > 0) || (isBearPred && priceDiff < 0)) {
-          wins++;
-        }
+      if (!current || !current.price || !log.initialPrice) {
+        return;
+      }
+
+      // 未滿 1 個交易日為待結算
+      if (daysElapsed < 1) {
+        pending++;
+        return;
+      }
+
+      evaluated++;
+      const priceDiff = current.price - log.initialPrice;
+      const pctDiff = log.initialPrice ? Math.abs((priceDiff / log.initialPrice) * 100) : 0;
+      const isBull = log.sentiment === 'bullish';
+      const isBear = log.sentiment === 'bearish';
+      const isNeutral = log.sentiment === 'neutral';
+
+      let isHit = false;
+      if (isBull) {
+        isHit = priceDiff > 0;
+      } else if (isBear) {
+        isHit = priceDiff < 0;
+      } else if (isNeutral) {
+        // 中性盤整：價格變動在 ±1.2% 以內視為盤整命中
+        isHit = pctDiff <= 1.2;
+      }
+
+      if (isHit) wins++;
+
+      if (isBull) {
+        bullTotal++;
+        if (priceDiff > 0) bullWins++;
+      } else if (isBear) {
+        bearTotal++;
+        if (priceDiff < 0) bearWins++;
+      }
+
+      // 依天數分流統計
+      if (daysElapsed >= 1 && daysElapsed <= 2) {
+        h1.total++;
+        if (isHit) h1.wins++;
+      } else if (daysElapsed >= 3 && daysElapsed <= 5) {
+        h3.total++;
+        if (isHit) h3.wins++;
+      } else if (daysElapsed >= 6) {
+        h5.total++;
+        if (isHit) h5.wins++;
       }
     });
 
-    const accuracy = verified > 0 ? Number(((wins / verified) * 100).toFixed(1)) : 0;
-    return { total: predictionLogs.length, verified, wins, accuracy };
+    const accuracy = evaluated > 0 ? Number(((wins / evaluated) * 100).toFixed(1)) : 0;
+    return {
+      total: predictionLogs.length,
+      evaluated,
+      pending,
+      wins,
+      accuracy,
+      bullWins,
+      bullTotal,
+      bearWins,
+      bearTotal,
+      horizon1D: { total: h1.total, wins: h1.wins, accuracy: h1.total > 0 ? Number(((h1.wins / h1.total) * 100).toFixed(1)) : 0 },
+      horizon3D: { total: h3.total, wins: h3.wins, accuracy: h3.total > 0 ? Number(((h3.wins / h3.total) * 100).toFixed(1)) : 0 },
+      horizon5D: { total: h5.total, wins: h5.wins, accuracy: h5.total > 0 ? Number(((h5.wins / h5.total) * 100).toFixed(1)) : 0 }
+    };
   }, [predictionLogs, livePrices]);
 
   return (
@@ -373,55 +453,128 @@ export default function TradePlanJournal({ onSelectStockToAnalyze }) {
       {/* 內容區 B: AI 預測成效驗證 */}
       {activeSubTab === 'predictions' && (
         <div className="glass-panel" style={{ padding: '22px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', flexWrap: 'wrap', gap: '14px' }}>
             <div>
               <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#f8fafc', margin: 0 }}>
-                AI 歷史預測精準度事後驗證
+                AI 歷史預測精準度多週期驗證
               </h3>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                記錄每一次 Gemini 預測結論，自動對照隔週真實收盤價統計命中率
+                區分 1 日 (隔日)、3 日 (短波)、5 日 (週波) 獨立統計命中率，杜絕無時效之價格比對
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.3)', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.72rem', color: '#93c5fd' }}>驗證樣本數</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: '900', color: '#fff' }}>{aiStats.verified} / {aiStats.total}</div>
+            {/* 總合統計指標 */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.3)', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.7rem', color: '#93c5fd' }}>已驗證樣本</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: '900', color: '#fff' }}>{aiStats.evaluated} <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>/ {aiStats.total}</span></div>
               </div>
-              <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.3)', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.72rem', color: '#6ee7b7' }}>AI 預測命中率</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: '900', color: '#34d399' }}>{aiStats.accuracy}%</div>
+              <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.3)', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.7rem', color: '#6ee7b7' }}>總體命中率</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: '900', color: '#34d399' }}>{aiStats.accuracy}%</div>
               </div>
             </div>
           </div>
+
+          {/* 多週期命中率分流看板 */}
+          {aiStats.evaluated > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: '10px', marginBottom: '18px' }}>
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: '600' }}>⚡ 1D 隔日命中率</div>
+                <div style={{ fontSize: '1.15rem', fontWeight: '800', color: aiStats.horizon1D.accuracy >= 50 ? '#34d399' : '#f87171', marginTop: '2px' }}>
+                  {aiStats.horizon1D.total > 0 ? `${aiStats.horizon1D.accuracy}%` : '--'}
+                </div>
+                <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{aiStats.horizon1D.wins} 中 / {aiStats.horizon1D.total} 筆</div>
+              </div>
+
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: '600' }}>🌊 3D 短波命中率</div>
+                <div style={{ fontSize: '1.15rem', fontWeight: '800', color: aiStats.horizon3D.accuracy >= 50 ? '#34d399' : '#f87171', marginTop: '2px' }}>
+                  {aiStats.horizon3D.total > 0 ? `${aiStats.horizon3D.accuracy}%` : '--'}
+                </div>
+                <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{aiStats.horizon3D.wins} 中 / {aiStats.horizon3D.total} 筆</div>
+              </div>
+
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: '600' }}>📊 5D 週波命中率</div>
+                <div style={{ fontSize: '1.15rem', fontWeight: '800', color: aiStats.horizon5D.accuracy >= 50 ? '#34d399' : '#f87171', marginTop: '2px' }}>
+                  {aiStats.horizon5D.total > 0 ? `${aiStats.horizon5D.accuracy}%` : '--'}
+                </div>
+                <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{aiStats.horizon5D.wins} 中 / {aiStats.horizon5D.total} 筆</div>
+              </div>
+
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: '600' }}>🎯 多空分項勝率</div>
+                <div style={{ fontSize: '0.75rem', color: '#fca5a5', marginTop: '4px' }}>
+                  多方: {aiStats.bullTotal > 0 ? `${((aiStats.bullWins / aiStats.bullTotal) * 100).toFixed(0)}%` : '--'} ({aiStats.bullWins}/{aiStats.bullTotal})
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#6ee7b7', marginTop: '2px' }}>
+                  空方: {aiStats.bearTotal > 0 ? `${((aiStats.bearWins / aiStats.bearTotal) * 100).toFixed(0)}%` : '--'} ({aiStats.bearWins}/{aiStats.bearTotal})
+                </div>
+              </div>
+            </div>
+          )}
 
           {predictionLogs.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
               尚未累積 AI 預測快照。每次在 K 線分析儀完成分析時，系統將自動建檔並於後續進行成效對照。
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(270px, 100%), 1fr))', gap: '12px' }}>
               {predictionLogs.map((log, idx) => {
                 const live = livePrices[log.stockCode];
                 const current = live ? live.price : log.initialPrice;
-                const diff = Number((((current - log.initialPrice) / log.initialPrice) * 100).toFixed(2));
+                const diff = log.initialPrice ? Number((((current - log.initialPrice) / log.initialPrice) * 100).toFixed(2)) : 0;
                 const isBull = log.sentiment === 'bullish';
-                const isCorrect = (isBull && diff > 0) || (!isBull && diff < 0);
+                const isBear = log.sentiment === 'bearish';
+                const isNeutral = log.sentiment === 'neutral';
+                const isHit = isBull ? diff > 0 : isBear ? diff < 0 : isNeutral ? Math.abs(diff) <= 1.2 : false;
+
+                const now = new Date();
+                const logDate = new Date(log.date || log.baseDate || Date.now());
+                const daysElapsed = Math.max(0, Math.floor((now - logDate) / (1000 * 60 * 60 * 24)));
+                const isPending = daysElapsed < 1;
+                const isOld = daysElapsed > 14;
 
                 return (
-                  <div key={idx} className="glass-card" style={{ padding: '14px', borderLeft: `4px solid ${isCorrect ? '#10b981' : '#f59e0b'}` }}>
+                  <div
+                    key={idx}
+                    className="glass-card"
+                    style={{
+                      padding: '14px',
+                      borderLeft: `4px solid ${isPending ? '#60a5fa' : isHit ? '#10b981' : '#f87171'}`
+                    }}
+                  >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                       <span style={{ fontWeight: '800', color: '#ffffff' }}>{log.stockName} ({log.stockCode})</span>
-                      <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{log.date?.split('T')[0]}</span>
+                      <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                        {log.date?.split('T')[0] || log.baseDate} (已過 {daysElapsed} 天)
+                      </span>
                     </div>
-                    <div style={{ fontSize: '0.82rem', color: isBull ? '#fca5a5' : '#6ee7b7', marginBottom: '4px' }}>
-                      AI 判定：{isBull ? '🚀 偏多攻擊' : '🔻 偏空修正'} ({log.probability || 80}%)
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '0.82rem', color: isBull ? '#fca5a5' : isBear ? '#6ee7b7' : '#fcd34d', fontWeight: '700' }}>
+                        模型判定：{isBull ? '🎯 偏多' : isBear ? '🔻 偏空' : '⚖️ 盤整'} ({log.probability ?? (isBull ? log.bullishProbability : isBear ? log.bearishProbability : log.neutralProbability) ?? 50}%)
+                      </span>
+                      <span style={{
+                        fontSize: '0.7rem',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        background: isPending ? 'rgba(59,130,246,0.15)' : isHit ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+                        color: isPending ? '#93c5fd' : isHit ? '#6ee7b7' : '#fca5a5',
+                        border: `1px solid ${isPending ? 'rgba(59,130,246,0.3)' : isHit ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
+                      }}>
+                        {isPending ? '🕒 待次日結算' : isHit ? '🎯 命中' : '⚠️ 失效'}
+                      </span>
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      分析時基準價：NT$ {log.initialPrice} $\rightarrow$ 目前現價：NT$ {current} ({diff >= 0 ? `+${diff}%` : `${diff}%`})
+
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                      基準價：{log.initialPrice} 元 $\rightarrow$ 現價：{current} 元 ({diff >= 0 ? `+${diff}%` : `${diff}%`})
                     </div>
-                    <div style={{ marginTop: '8px', fontSize: '0.75rem', fontWeight: '700', color: isCorrect ? '#34d399' : '#fbbf24' }}>
-                      {isCorrect ? '✅ 預測方向命中' : '⚠️ 走勢與預期不同'}
+
+                    <div style={{ marginTop: '8px', fontSize: '0.74rem', color: '#94a3b8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>形態：{log.patternName}</span>
+                      {isOld && <span style={{ color: '#64748b', fontSize: '0.68rem' }}>已存檔 (&gt;14D)</span>}
                     </div>
                   </div>
                 );

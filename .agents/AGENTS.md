@@ -24,3 +24,7 @@ These rules must be strictly followed by all AI agents operating within the `kli
 - 語氣必須冷靜、專業、克制。
 - **禁止使用表情符號 (No Emojis)**：在撰寫正式的分析報告內容或修改分析師 Prompt 時，絕對禁用任何表情符號，以維持報告的嚴肅性。
 - 當系統需要以 JSON 格式回傳結構化資料給前端渲染時，必須確保 Markdown 格式（如換行符號 `\n`）能被正確放入 JSON 欄位中且不會破壞解析。
+
+## Deployment & Postdeploy Rules (部署流程規則)
+1. **Mandatory postdeploy Script**: 在 `package.json` 中的 `"postdeploy": "node postdeploy.js"` 必須永遠保留，嚴禁在任何代碼重構、審查或計畫中將其移除或停用。
+2. **自動提交與同步**: `npm run deploy` 必須維持「建置 (`predeploy`) $\rightarrow$ 發布 GitHub Pages (`deploy`) $\rightarrow$ 自動 `git add/commit/push` 原始碼到 `main` 分支 (`postdeploy`)」的一鍵式完整閉環流程。
