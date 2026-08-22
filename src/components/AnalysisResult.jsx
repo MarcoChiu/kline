@@ -4,6 +4,7 @@ import { KLINE_PATTERNS } from '../data/klinePatterns';
 import { PatternSVG } from './PatternEncyclopedia';
 import YahooKlineCanvas from './YahooKlineCanvas';
 import PositionRiskCalculator from './PositionRiskCalculator';
+import SwingPivotCalculator from './SwingPivotCalculator';
 import { runPatternBacktest } from '../services/backtestService';
 
 export default function AnalysisResult({ result, isAnalyzing, onOpenApiKeyModal }) {
@@ -736,7 +737,15 @@ export default function AnalysisResult({ result, isAnalyzing, onOpenApiKeyModal 
         </div>
       )}
 
-      {/* 6. 實戰部位大小與台股風控計算器 */}
+      {/* 6. 波段頂底速算器（三分法測算 & 關鍵支撐/測頂） */}
+      <SwingPivotCalculator
+        stockCode={displayCode}
+        stockName={displayName}
+        currentPrice={displayPrice}
+        historicalData={result?.stockData?.historicalData || result?.stockData?.fullHistoricalData || []}
+      />
+
+      {/* 7. 實戰部位大小與台股風控計算器 */}
       <PositionRiskCalculator
         stockCode={displayCode}
         stockName={displayName}
